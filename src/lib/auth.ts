@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
@@ -8,6 +9,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
  * klien `supabase` ini sehingga RLS yang menegakkan isolasi antar bisnis.
  */
 export async function requireContext() {
+  await connection();
   const supabase = await createSupabaseServer();
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
