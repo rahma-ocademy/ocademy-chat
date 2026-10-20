@@ -1,26 +1,113 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Design token gaya ocademy.id (lihat riset-cekat/RISET.md §9). */
+@theme {
+  --color-navy: #293867;
+  --color-navy-dark: #253561;
+  --color-brand: #017F8C; /* tosca gelap: teks putih di atasnya 4.76:1 */
+  --color-brand-dark: #016A75;
+  --color-accent: #02B1C3; /* tosca ocademy: aksen/ikon/fokus, bukan latar teks putih */
+  --color-brand-soft: #F2FAFB;
+  --color-surface: #FFFFFF;
+  --color-bg: #F5F8FD;
+  --color-ink: #333333;
+  --color-muted: #546085;
+  --color-line: #D4D5DA;
+  --color-line-soft: #E6E9F2;
+  --color-tint: #EEF1F8;
+  --color-ok: #005C46;
+  --color-ok-soft: #E3F4EE;
+  --color-warn: #7A4B00;
+  --color-warn-soft: #FDF0D5;
+  --color-bad: #B42318;
+  --color-bad-soft: #FDECEA;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, monospace;
+  --radius-card: 12px;
+  --shadow-card: 0 1px 2px rgb(41 56 103 / 0.05), 0 8px 24px rgb(41 56 103 / 0.05);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-transparent px-5 text-[15px] leading-none font-semibold no-underline transition active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent focus-visible:ring-offset-2;
+  }
+  .btn-primary {
+    @apply bg-brand text-white shadow-[0_1px_2px_rgb(1_96_106/0.25),0_6px_16px_rgb(1_127_140/0.2)] hover:bg-brand-dark;
+  }
+  .btn-secondary {
+    @apply border-line bg-white text-navy shadow-[0_1px_2px_rgb(41_56_103/0.06)] hover:border-navy hover:bg-bg;
+  }
+  .btn-outline {
+    @apply border-brand bg-white text-[#01606A] hover:bg-brand-soft;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-muted hover:bg-tint hover:text-navy;
+  }
+  .btn-danger {
+    @apply bg-transparent text-bad hover:bg-bad-soft;
+  }
+  .btn-dashed {
+    @apply border-[1.5px] border-dashed border-brand bg-white text-[#01606A] hover:border-solid hover:bg-brand-soft;
+  }
+  .btn-sm {
+    @apply min-h-9 rounded-lg px-3.5 text-sm;
+  }
+  .btn-lg {
+    @apply min-h-12 px-7 text-base;
+  }
+
+  .card {
+    @apply rounded-card border border-line-soft bg-surface shadow-card;
+  }
+  .field {
+    @apply min-h-11 w-full rounded-lg border border-line bg-white px-3.5 text-[15px] text-ink transition hover:border-[#A9B0C6] focus-visible:border-brand focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-navy;
+  }
+  .hint {
+    @apply mt-1.5 text-[13px] text-muted;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+  .badge-ok { @apply bg-ok-soft text-ok; }
+  .badge-warn { @apply bg-warn-soft text-warn; }
+  .badge-bad { @apply bg-bad-soft text-bad; }
+  .badge-info { @apply bg-[#E6F7F9] text-[#01606A]; }
+  .badge-muted { @apply bg-tint text-muted; }
+
+  .switch {
+    @apply relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-[#8E95AB] align-middle transition-colors checked:bg-brand focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+  .switch::before {
+    content: "";
+    @apply absolute top-[3px] left-[3px] size-[18px] rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.25)] transition-transform;
+  }
+  .switch:checked::before {
+    @apply translate-x-5;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto;
+  }
+  .table {
+    @apply w-full border-collapse text-sm;
+  }
+  .table th {
+    @apply bg-bg px-4 py-3 text-left font-bold text-muted;
+  }
+  .table td {
+    @apply border-t border-line-soft px-4 py-3.5 align-middle;
+  }
+  .table tbody tr {
+    @apply transition-colors hover:bg-[#F8FAFE];
+  }
 }
