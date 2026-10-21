@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
+  { href: "/chat", label: "Inbox" },
+  { href: "/inboxes", label: "Channel" },
   { href: "/followups", label: "Followups" },
   { href: "/templates", label: "Template" },
   { href: "/integrations", label: "Integrasi & API" },

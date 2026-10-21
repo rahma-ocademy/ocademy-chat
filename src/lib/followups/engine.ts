@@ -111,6 +111,26 @@ export async function ingestEvent(admin: Admin, input: IngestInput, now = new Da
   return { duplicate: false, eventId: ev.id, jobsCreated: jobs.length, jobsCancelled };
 }
 
+/** Pelanggan membalas → batalkan follow-up yang menunggu untuk nomor itu dari aturan ber-`stop_on_reply`. */
+export async function cancelOnReply(admin: Admin, businessId: string, phone: string): Promise<number> {
+  const { data: rules } = await admin
+    .from("followup_rules")
+    .select("id")
+    .eq("business_id", businessId)
+    .eq("stop_on_reply", true);
+  const ids = (rules ?? []).map((r) => r.id as string);
+  if (!ids.length) return 0;
+  const { data } = await admin
+    .from("followup_jobs")
+    .update({ status: "cancelled", error: "customer_replied" })
+    .eq("business_id", businessId)
+    .eq("status", "pending")
+    .eq("contact->>phone", phone)
+    .in("rule_id", ids)
+    .select("id");
+  return data?.length ?? 0;
+}
+
 /** Pilih varian isi OrderOnline berdasarkan metode bayar; selain itu pakai isi utama (transfer bank). */
 export function pickBody(t: Pick<TemplateRow, "body" | "variants">, data: Record<string, unknown>): string {
   const method = String(data.payment_method ?? "").toLowerCase();

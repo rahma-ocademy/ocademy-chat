@@ -19,7 +19,7 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   // Pesan sengaja generik: tidak membocorkan apakah email terdaftar.
   if (error) return { error: "Email atau kata sandi salah." };
-  redirect("/followups");
+  redirect("/chat");
 }
 
 export async function register(_: AuthState, formData: FormData): Promise<AuthState> {
@@ -38,7 +38,7 @@ export async function register(_: AuthState, formData: FormData): Promise<AuthSt
 
   // Konfirmasi email aktif → belum ada sesi. Bisnis dibuat otomatis saat login pertama (lib/auth.ts).
   if (!data.session) return { message: "Pendaftaran berhasil. Cek email Anda untuk konfirmasi, lalu masuk." };
-  redirect("/followups");
+  redirect("/chat");
 }
 
 export async function logout() {
