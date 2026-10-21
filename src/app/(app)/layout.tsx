@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Sidebar } from "@/components/sidebar";
+import { Sidebar, SidebarNav } from "@/components/sidebar";
 import { UserMenu } from "@/components/user-menu";
 import { PageSkeleton } from "@/components/page";
 
@@ -20,7 +20,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <div className="mx-auto flex w-full max-w-[1280px] flex-wrap items-start gap-6 px-6 py-6">
-        <Sidebar />
+        <Suspense fallback={<SidebarNav pathname="" />}>
+          <Sidebar />
+        </Suspense>
         <main className="min-w-0 flex-[999_1_560px]">
           <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
         </main>

@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { safeNext } from "@/lib/safe-next";
 
-const APP_PREFIXES = ["/chat", "/inboxes", "/followups", "/templates", "/integrations", "/usage"];
+const APP_PREFIXES = ["/chat", "/connected-platforms", "/ai-agents", "/settings", "/followups", "/templates", "/integrations", "/usage"];
 const AUTH_PAGES = ["/login", "/register"];
 
 /**
@@ -38,7 +39,7 @@ export async function proxy(request: NextRequest) {
   }
   if (signedIn && AUTH_PAGES.includes(path)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/chat";
+    url.pathname = safeNext(request.nextUrl.searchParams.get("next"));
     url.search = "";
     return NextResponse.redirect(url);
   }

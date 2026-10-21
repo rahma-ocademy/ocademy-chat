@@ -5,21 +5,27 @@ import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/chat", label: "Inbox" },
-  { href: "/inboxes", label: "Channel" },
+  { href: "/connected-platforms", label: "Platform terhubung" },
+  { href: "/ai-agents", label: "AI agent" },
   { href: "/followups", label: "Followups" },
   { href: "/templates", label: "Template" },
+  { href: "/settings/users", label: "Pengguna" },
   { href: "/integrations", label: "Integrasi & API" },
   { href: "/usage", label: "Usage & paket" },
 ];
 
 export function Sidebar() {
-  const pathname = usePathname();
+  return <SidebarNav pathname={usePathname()} />;
+}
+
+/** Tanpa hook: dipakai juga sebagai fallback <Suspense> saat path belum tersedia (route dinamis). */
+export function SidebarNav({ pathname }: { pathname: string }) {
   return (
     <aside aria-label="Menu" className="card w-full shrink-0 py-3 md:w-60">
       <p className="px-5 py-2 text-xs font-bold tracking-wider text-muted uppercase">Chat</p>
       <nav className="flex flex-col">
         {ITEMS.map((i) => {
-          const active = pathname === i.href || pathname.startsWith(`${i.href}/`);
+          const active = Boolean(pathname) && (pathname === i.href || pathname.startsWith(`${i.href}/`));
           return (
             <Link
               key={i.href}

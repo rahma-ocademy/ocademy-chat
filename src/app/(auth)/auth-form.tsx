@@ -1,24 +1,35 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
 import { login, register, type AuthState } from "./actions";
 import { SubmitButton } from "@/components/ui";
+import { isInvitePath, safeNext } from "@/lib/safe-next";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [state, action] = useActionState<AuthState, FormData>(mode === "login" ? login : register, {});
   const isLogin = mode === "login";
+  const params = useSearchParams();
+  const next = safeNext(params.get("next"));
+  const viaInvite = isInvitePath(next);
+  const other = `${isLogin ? "/register" : "/login"}${params.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   return (
     <form action={action} className="card flex flex-col gap-5 p-7" noValidate>
       <div>
         <h1 className="text-2xl font-bold text-navy">{isLogin ? "Masuk" : "Buat akun"}</h1>
         <p className="mt-1 text-sm text-muted">
-          {isLogin ? "Lanjutkan ke dashboard follow-up Anda." : "Mulai dengan paket Free. Tanpa kartu kredit."}
+          {viaInvite
+            ? "Lanjutkan untuk menerima undangan tim."
+            : isLogin
+              ? "Lanjutkan ke dashboard follow-up Anda."
+              : "Mulai dengan paket Free. Tanpa kartu kredit."}
         </p>
       </div>
 
-      {!isLogin && (
+      <input type="hidden" name="next" value={next} />
+      {!isLogin && !viaInvite && (
         <div>
           <label htmlFor="business" className="label">Nama bisnis</label>
           <input id="business" name="business" className="field" autoComplete="organization" required />
@@ -26,7 +37,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       )}
       <div>
         <label htmlFor="email" className="label">Email</label>
-        <input id="email" name="email" type="email" className="field" autoComplete="email" required />
+        <input id="email" name="email" type="email" className="field" autoComplete="email" defaultValue={params.get("email") ?? ""} required />
       </div>
       <div>
         <label htmlFor="password" className="label">Kata sandi</label>
@@ -43,7 +54,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
       <p className="text-center text-sm text-muted">
         {isLogin ? "Belum punya akun? " : "Sudah punya akun? "}
-        <Link href={isLogin ? "/register" : "/login"} className="font-semibold text-brand underline-offset-2 hover:underline">
+        <Link href={other} className="font-semibold text-brand underline-offset-2 hover:underline">
           {isLogin ? "Daftar" : "Masuk"}
         </Link>
       </p>

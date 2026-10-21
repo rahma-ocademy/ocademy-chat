@@ -27,11 +27,12 @@ export type ConversationItem = {
 export type MessageRow = {
   id: string;
   direction: "in" | "out";
-  sender_type: "contact" | "agent" | "ai" | "system";
+  sender_type: "contact" | "agent" | "ai" | "system" | "phone";
   sender_id: string | null;
   is_private: boolean;
   body: string;
   status: string;
+  error: string | null;
   created_at: string;
 };
 
@@ -100,7 +101,7 @@ export async function getConversation(supabase: Client, businessId: string, id: 
   const [msgs, labels] = await Promise.all([
     supabase
       .from("messages")
-      .select("id, direction, sender_type, sender_id, is_private, body, status, created_at")
+      .select("id, direction, sender_type, sender_id, is_private, body, status, error, created_at")
       .eq("conversation_id", id)
       .order("created_at", { ascending: false })
       .limit(200),
@@ -121,16 +122,28 @@ export async function getConversation(supabase: Client, businessId: string, id: 
   };
 }
 
-/** Status onboarding inbox, dihitung dari data nyata (bukan flag terpisah yang bisa basi). */
+/** Status onboarding inbox (4 langkah pola Cekat), dihitung dari data nyata (bukan flag terpisah yang bisa basi). */
 export async function getSetupState(supabase: Client, businessId: string) {
   const head = { count: "exact" as const, head: true };
-  const [inboxes, convs, rules] = await Promise.all([
+  const [agents, inboxes, members, invites, aiInboxes, convs] = await Promise.all([
+    supabase.from("ai_agents").select("id", head).eq("business_id", businessId),
     supabase.from("inboxes").select("id", head).eq("business_id", businessId),
+    supabase.from("memberships").select("user_id", head).eq("business_id", businessId).eq("status", "active"),
+    supabase.from("invitations").select("id", head).eq("business_id", businessId).is("revoked_at", null),
+    supabase.from("inboxes").select("id", head).eq("business_id", businessId).not("ai_agent_id", "is", null),
     supabase.from("conversations").select("id", head).eq("business_id", businessId),
-    supabase.from("followup_rules").select("id", head).eq("business_id", businessId).eq("active", true),
   ]);
-  return { hasInbox: (inboxes.count ?? 0) > 0, hasConversation: (convs.count ?? 0) > 0, hasActiveRule: (rules.count ?? 0) > 0 };
+  return {
+    hasAgent: (agents.count ?? 0) > 0,
+    hasInbox: (inboxes.count ?? 0) > 0,
+    // Undangan hanya terbaca oleh yang berizin Pengguna; anggota > 1 juga dihitung sebagai "tim sudah diundang".
+    hasTeam: (members.count ?? 0) > 1 || (invites.count ?? 0) > 0,
+    hasAiInbox: (aiInboxes.count ?? 0) > 0,
+    hasConversation: (convs.count ?? 0) > 0,
+  };
 }
+
+export type SetupState = Awaited<ReturnType<typeof getSetupState>>;
 
 /** Label waktu daftar: jam bila hari ini (WIB), tanggal bila lebih lama. */
 export function listTimeLabel(iso: string): string {
@@ -144,7 +157,7 @@ export function listTimeLabel(iso: string): string {
 
 export async function getInboxContext(supabase: Client, businessId: string) {
   const [agents, labels, inboxes] = await Promise.all([
-    supabase.from("memberships").select("user_id, email, role").eq("business_id", businessId),
+    supabase.from("memberships").select("user_id, email, role").eq("business_id", businessId).eq("status", "active"),
     supabase.from("labels").select("id, name, color").eq("business_id", businessId).order("name"),
     supabase.from("inboxes").select("id, name, type, active, widget_key").eq("business_id", businessId).order("created_at"),
   ]);

@@ -100,7 +100,16 @@ export default async function ChatPage({ searchParams }: { searchParams: SearchP
               status={detail.status}
               messages={detail.messages.map((m) => ({
                 ...m,
-                author: m.sender_type === "contact" ? null : m.sender_type === "ai" ? "AI" : m.sender_type === "system" ? "Sistem" : agentName(m.sender_id),
+                author:
+                  m.sender_type === "contact"
+                    ? null
+                    : m.sender_type === "ai"
+                      ? "AI"
+                      : m.sender_type === "system"
+                        ? "Follow-up otomatis"
+                        : m.sender_type === "phone"
+                          ? "via HP (WhatsApp Business)"
+                          : agentName(m.sender_id),
               }))}
             />
           ) : setup.hasConversation ? (

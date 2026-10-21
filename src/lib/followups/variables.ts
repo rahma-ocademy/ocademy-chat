@@ -39,3 +39,17 @@ export const ORDERONLINE_VAR_MAP: Record<string, string> = {
 export function convertOrderOnlineBody(body: string): string {
   return body.replace(VAR_RE, (_w, name: string) => `{{${ORDERONLINE_VAR_MAP[name] ?? name}}}`);
 }
+
+/**
+ * Parameter template WhatsApp ({{1}}, {{2}}, …) dari `wa_param_map` ({"1": "customer_name", …}).
+ * Urut numerik; nilai kosong diganti "-" karena Meta menolak parameter kosong.
+ */
+export function templateParams(map: Record<string, string>, vars: Record<string, unknown>): string[] {
+  return Object.keys(map)
+    .filter((k) => /^\d+$/.test(k))
+    .sort((a, b) => Number(a) - Number(b))
+    .map((k) => {
+      const v = vars[map[k]];
+      return v === undefined || v === null || String(v).trim() === "" ? "-" : String(v);
+    });
+}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireContext } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
+import { sendWhatsApp, type WaInbox } from "@/lib/whatsapp/channel";
 
 export type ChatResult = { ok: true } | { ok: false; error: string };
 
@@ -15,7 +16,7 @@ async function load(conversationId: string) {
   const ctx = await requireContext();
   const { data } = await ctx.supabase
     .from("conversations")
-    .select("id, assignee_id, status, contacts(phone), inboxes(type)")
+    .select("id, assignee_id, status, contacts(phone), inboxes(id, business_id, type, active, status, wa_phone_number_id, connection_mode)")
     .eq("id", conversationId)
     .eq("business_id", ctx.businessId)
     .maybeSingle();
@@ -29,10 +30,16 @@ export async function sendMessage(conversationId: string, body: string, isPrivat
   const { supabase, businessId, user, conv } = await load(conversationId);
   if (!conv) return fail("Percakapan tidak ditemukan.");
 
-  const inbox = (Array.isArray(conv.inboxes) ? conv.inboxes[0] : conv.inboxes) as { type: string } | null;
+  const inbox = (Array.isArray(conv.inboxes) ? conv.inboxes[0] : conv.inboxes) as
+    | (WaInbox & { type: string; active: boolean; status: string })
+    | null;
   const contact = (Array.isArray(conv.contacts) ? conv.contacts[0] : conv.contacts) as { phone: string | null } | null;
-  // Livechat: widget mengambil pesan langsung dari database. Kanal lain: masuk antrean keluar (driver belum ada).
-  const viaOutbox = !isPrivate && inbox?.type !== "livechat";
+  // Livechat: widget mengambil pesan langsung dari database. WhatsApp: dikirim langsung lewat Cloud API.
+  // Kanal lain (api): masuk antrean keluar untuk diambil sistem pemanggil.
+  const viaWhatsApp = !isPrivate && inbox?.type === "whatsapp";
+  const viaOutbox = !isPrivate && !viaWhatsApp && inbox?.type !== "livechat";
+  if (viaWhatsApp && (!inbox.active || inbox.status !== "connected")) return fail("Inbox WhatsApp ini tidak aktif atau terputus. Cek di Platform.");
+  if (viaWhatsApp && !contact?.phone) return fail("Kontak ini tidak punya nomor WhatsApp.");
 
   const { data: msg, error } = await supabase
     .from("messages")
@@ -44,11 +51,23 @@ export async function sendMessage(conversationId: string, body: string, isPrivat
       sender_id: user.id,
       is_private: isPrivate,
       body: parsed.data.body,
-      status: viaOutbox ? "queued" : "sent",
+      status: viaOutbox || viaWhatsApp ? "queued" : "sent",
     })
     .select("id")
     .single();
   if (error || !msg) return fail("Pesan gagal dikirim.");
+
+  let sendError: string | null = null;
+  if (viaWhatsApp) {
+    // Agen tidak boleh mengubah baris pesan (RLS); status hasil kirim ditulis server.
+    const admin = createSupabaseAdmin();
+    const out = await sendWhatsApp(admin, inbox, contact!.phone!, { text: parsed.data.body });
+    await admin
+      .from("messages")
+      .update(out.ok ? { status: "sent", external_id: out.externalId || null } : { status: "failed", error: out.error })
+      .eq("id", msg.id);
+    if (!out.ok) sendError = out.error;
+  }
 
   if (viaOutbox) {
     await createSupabaseAdmin()
@@ -62,7 +81,7 @@ export async function sendMessage(conversationId: string, body: string, isPrivat
   await supabase.from("conversations").update(patch).eq("id", conversationId).eq("business_id", businessId);
 
   revalidatePath("/chat");
-  return { ok: true };
+  return sendError ? fail(sendError) : { ok: true };
 }
 
 export async function assignConversation(conversationId: string, assigneeId: string | null): Promise<ChatResult> {
@@ -75,8 +94,9 @@ export async function assignConversation(conversationId: string, assigneeId: str
       .from("memberships")
       .select("user_id", { count: "exact", head: true })
       .eq("business_id", businessId)
-      .eq("user_id", assigneeId);
-    if (!count) return fail("Agen bukan anggota bisnis ini.");
+      .eq("user_id", assigneeId)
+      .eq("status", "active");
+    if (!count) return fail("Agen bukan anggota aktif bisnis ini.");
   }
   const { error } = await supabase.from("conversations").update({ assignee_id: assigneeId }).eq("id", conversationId).eq("business_id", businessId);
   if (error) return fail("Gagal menyimpan.");

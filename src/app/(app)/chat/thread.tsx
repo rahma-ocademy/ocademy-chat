@@ -10,6 +10,7 @@ type Msg = {
   is_private: boolean;
   body: string;
   status: string;
+  error?: string | null;
   created_at: string;
   author: string | null;
 };
@@ -70,9 +71,12 @@ export function ThreadView({
                     <p className="mb-1 text-[11px] font-bold">{m.is_private ? `Catatan internal · ${m.author ?? ""}` : m.author}</p>
                   )}
                   <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
+                  {m.status === "failed" && m.error && <p className="mt-1 text-[12px] text-bad">{m.error}</p>}
                   <p className="mt-1 text-right text-[11px] text-muted">
                     {time(m.created_at)}
                     {mine && !m.is_private && m.status === "queued" ? " · dalam antrean" : ""}
+                    {mine && !m.is_private && m.status === "delivered" ? " · terkirim" : ""}
+                    {mine && !m.is_private && m.status === "read" ? " · dibaca" : ""}
                     {m.status === "failed" ? " · gagal" : ""}
                   </p>
                 </div>

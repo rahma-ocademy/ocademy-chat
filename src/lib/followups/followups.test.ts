@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeScheduledAt } from "@/lib/followups/schedule";
-import { convertOrderOnlineBody, extractVariables, renderTemplate } from "@/lib/followups/variables";
+import { convertOrderOnlineBody, extractVariables, renderTemplate, templateParams } from "@/lib/followups/variables";
 import { matchesConditions } from "@/lib/followups/conditions";
 import { normalizePhone } from "@/lib/phone";
 
@@ -87,5 +87,11 @@ describe("normalizePhone", () => {
     expect(normalizePhone("abc")).toBeUndefined();
     expect(normalizePhone("123")).toBeUndefined();
     expect(normalizePhone(undefined)).toBeUndefined();
+  });
+});
+
+describe("templateParams", () => {
+  it("urut numerik, nilai kosong jadi '-'", () => {
+    expect(templateParams({ "2": "order_id", "1": "customer_name", "10": "total", x: "abaikan" }, { customer_name: "Rani", order_id: "", total: 5 })).toEqual(["Rani", "-", "5"]);
   });
 });

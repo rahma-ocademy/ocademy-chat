@@ -6,7 +6,8 @@ import { decryptSecret } from "@/lib/crypto";
 import { markProgress, login } from "@/lib/orderonline/client";
 import { matchesConditions } from "@/lib/followups/conditions";
 import { computeScheduledAt, DEFAULT_TZ } from "@/lib/followups/schedule";
-import { renderTemplate } from "@/lib/followups/variables";
+import { renderTemplate, templateParams } from "@/lib/followups/variables";
+import { ensureConversation, findSendingInbox, sendWhatsApp } from "@/lib/whatsapp/channel";
 import type { JobRow, RuleRow, TemplateRow } from "@/lib/types";
 
 export type IngestInput = {
@@ -223,11 +224,51 @@ async function processJob(admin: Admin, job: JobRow): Promise<"sent" | "skipped"
     return "failed";
   }
 
-  // Penyedia WhatsApp belum terpasang: pesan masuk antrean keluar (outbox_messages) untuk diambil driver kanal.
-  const { error: outErr } = await admin
-    .from("outbox_messages")
-    .insert({ business_id: job.business_id, job_id: job.id, channel: "whatsapp", to_phone: phone, body: text });
-  if (outErr) throw new Error(`Gagal mengantrekan pesan: ${outErr.message}`);
+  // Ada inbox WhatsApp terhubung → kirim lewat Cloud API dan tampilkan di percakapan kontak.
+  // Belum ada → tetap masuk antrean keluar (outbox_messages) seperti sebelumnya.
+  const inbox = await findSendingInbox(admin, job.business_id);
+  if (inbox) {
+    // Di luar jendela 24 jam WhatsApp hanya menerima template yang disetujui Meta.
+    const message = template.wa_template_name
+      ? { template: template.wa_template_name, language: optionalEnv("WHATSAPP_TEMPLATE_LANGUAGE") ?? "id", params: templateParams(template.wa_param_map, vars) }
+      : { text };
+    const out = await sendWhatsApp(admin, inbox, phone, message);
+    await admin.from("outbox_messages").insert({
+      business_id: job.business_id,
+      job_id: job.id,
+      inbox_id: inbox.id,
+      channel: "whatsapp",
+      to_phone: phone,
+      body: text,
+      status: out.ok ? "sent" : "failed",
+      external_id: out.ok ? out.externalId || null : null,
+      error: out.ok ? null : out.error,
+      sent_at: out.ok ? new Date().toISOString() : null,
+    });
+    if (!out.ok) {
+      // Di luar jendela 24 jam tidak akan berhasil dengan mengulang → gagal permanen.
+      if (out.outsideWindow) {
+        await finish(admin, job.id, { status: "failed", rendered_body: text, error: "outside_24h_window" });
+        return "failed";
+      }
+      throw new Error(out.error);
+    }
+    const { conversationId } = await ensureConversation(admin, inbox, phone, job.contact.name ?? null);
+    await admin.from("messages").insert({
+      business_id: job.business_id,
+      conversation_id: conversationId,
+      direction: "out",
+      sender_type: "system",
+      body: text,
+      status: "sent",
+      external_id: out.externalId || null,
+    });
+  } else {
+    const { error: outErr } = await admin
+      .from("outbox_messages")
+      .insert({ business_id: job.business_id, job_id: job.id, channel: "whatsapp", to_phone: phone, body: text });
+    if (outErr) throw new Error(`Gagal mengantrekan pesan: ${outErr.message}`);
+  }
 
   await finish(admin, job.id, { status: "sent", rendered_body: text, sent_at: new Date().toISOString(), error: null });
   await syncProgress(admin, job).catch(() => undefined); // best effort; tidak boleh menggagalkan pengiriman
