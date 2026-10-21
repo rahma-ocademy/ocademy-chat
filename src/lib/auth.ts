@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { connection } from "next/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -14,8 +15,11 @@ export type Context = Awaited<ReturnType<typeof requireContext>>;
  * Data Access Layer: satu pintu untuk "siapa yang login, bisnis mana yang aktif, dan apa perannya".
  * Dipanggil di dalam <Suspense> (pembacaan sesi = request-time). Query lanjutan memakai
  * klien `supabase` ini sehingga RLS yang menegakkan isolasi antar bisnis.
+ *
+ * Dibungkus `cache()`: layout (menu, profil) dan halaman memanggilnya bersamaan dalam satu request, jadi sesi
+ * cukup dibaca sekali dan `bootstrap_business` tidak terpanggil ganda (bisnis dobel) saat login pertama.
  */
-export async function requireContext() {
+export const requireContext = cache(async function requireContext() {
   await connection();
   const supabase = await createSupabaseServer();
   const { data: auth } = await supabase.auth.getUser();
@@ -59,7 +63,7 @@ export async function requireContext() {
     permissions: active.permissions as Permissions,
     businessIds: memberships.map((m) => m.businessId),
   };
-}
+});
 
 export const isAdmin = (ctx: Pick<Context, "role">) => isAdminRole(ctx.role);
 

@@ -16,7 +16,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const other = `${isLogin ? "/register" : "/login"}${params.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   return (
-    <form action={action} className="card flex flex-col gap-5 p-7" noValidate>
+    <form action={action} className="card rise flex flex-col gap-5 p-7 sm:p-8" noValidate>
       <div>
         <h1 className="text-2xl font-bold text-navy">{isLogin ? "Masuk" : "Buat akun"}</h1>
         <p className="mt-1 text-sm text-muted">

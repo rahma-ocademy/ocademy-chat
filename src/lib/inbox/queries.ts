@@ -89,6 +89,17 @@ export async function countTabs(supabase: Client, businessId: string, userId: st
   return { assigned, unassigned, resolved };
 }
 
+/** Jumlah percakapan terbuka yang punya pesan belum dibaca (badge menu Inbox). */
+export async function countUnread(supabase: Client, businessId: string) {
+  const { count } = await supabase
+    .from("conversations")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", businessId)
+    .eq("status", "open")
+    .gt("unread_count", 0);
+  return count ?? 0;
+}
+
 export async function getConversation(supabase: Client, businessId: string, id: string) {
   const { data: conv } = await supabase
     .from("conversations")

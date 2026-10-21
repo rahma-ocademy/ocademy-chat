@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Bot } from "lucide-react";
 import { isAdmin, requireContext } from "@/lib/auth";
 import { EmptyState, Notice } from "@/components/page";
 import { parseConfig, parseInstructions, parseRouting, STYLE_PRESETS, type StylePreset } from "@/lib/ai/config";
@@ -34,14 +35,20 @@ export default async function AiAgentPage(props: PageProps<"/ai-agents/[id]">) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/ai-agents" className="text-sm font-semibold text-brand hover:underline">← AI agent</Link>
+      <Link href="/ai-agents" className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-[#01606A] hover:underline">
+        <ArrowLeft aria-hidden="true" className="size-4" /> AI agent
+      </Link>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] leading-tight font-bold text-navy">{agent.name}</h1>
-          <p className="mt-1.5 text-[15px] text-muted">
-            {inboxes?.length ? `Dipakai di: ${inboxes.map((i) => i.name).join(", ")}` : "Belum dihubungkan ke inbox. "}
-            {!inboxes?.length && <Link href="/connected-platforms" className="font-semibold text-brand underline">Hubungkan di Platform terhubung</Link>}
-          </p>
+        <div className="flex items-start gap-4">
+          <span className="icon-tile icon-tile-lg tone-violet hidden sm:inline-flex"><Bot aria-hidden="true" className="size-6" /></span>
+          <div>
+            <p className="text-xs font-bold tracking-[0.08em] text-brand uppercase">Otomasi · AI agent</p>
+            <h1 className="text-[28px] leading-tight font-bold text-navy">{agent.name}</h1>
+            <p className="mt-1.5 text-[15px] text-muted">
+              {inboxes?.length ? `Dipakai di: ${inboxes.map((i) => i.name).join(", ")}` : "Belum dihubungkan ke inbox. "}
+              {!inboxes?.length && <Link href="/connected-platforms" className="font-semibold text-brand underline">Hubungkan di Platform terhubung</Link>}
+            </p>
+          </div>
         </div>
         {!readOnly && <DeleteAgentButton id={agent.id} name={agent.name} />}
       </div>
@@ -54,7 +61,7 @@ export default async function AiAgentPage(props: PageProps<"/ai-agents/[id]">) {
             key={t.id}
             href={`/ai-agents/${id}?tab=${t.id}`}
             aria-current={tab === t.id ? "page" : undefined}
-            className={`-mb-px border-b-[3px] px-4 py-2.5 text-[15px] ${tab === t.id ? "border-navy font-bold text-navy" : "border-transparent text-muted hover:text-navy"}`}
+            className={`-mb-px border-b-[3px] px-4 py-2.5 text-[15px] ${tab === t.id ? "border-brand font-bold text-navy" : "border-transparent text-muted hover:border-line hover:text-navy"}`}
           >
             {t.label}
           </Link>

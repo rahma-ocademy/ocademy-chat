@@ -34,8 +34,9 @@ export default async function OrderOnlinePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/integrations" className="btn btn-secondary btn-sm self-start">← Integrasi &amp; API</Link>
       <PageHeader
+        nav="/integrations"
+        back={{ href: "/integrations", label: "Integrasi & API" }}
         title="OrderOnline"
         description="Impor template follow-up & pengiriman dari OrderOnline, terima event order lewat webhook, lalu kirim follow-up dari sini."
       />

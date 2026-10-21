@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LivechatWidget } from "./widget";
+import { LegalFooter } from "@/components/legal-footer";
 
 export const metadata: Metadata = { title: "Chat", robots: { index: false } };
 
@@ -10,6 +11,7 @@ export default function WidgetPage({ params }: { params: Promise<{ key: string }
       <Suspense fallback={<div className="card flex-1 animate-pulse" aria-hidden="true" />}>
         <LivechatWidget params={params} />
       </Suspense>
+      <LegalFooter className="pt-3" />
     </main>
   );
 }

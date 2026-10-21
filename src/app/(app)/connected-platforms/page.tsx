@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { isAdmin, requireContext } from "@/lib/auth";
+import { ExternalLink, Globe, MousePointerClick, Plus, RadioTower, Search, Smartphone, Webhook } from "lucide-react";
 import { EmptyState, Notice, PageHeader } from "@/components/page";
 import { CopyButton } from "@/components/ui";
 import { INBOX_TYPE_LABEL, MODE_LABEL, STATUS_BADGE } from "@/lib/platforms";
 import { InboxSettingsForm, WhatsAppControls } from "./forms";
 
 export const metadata: Metadata = { title: "Platform terhubung" };
+
+const TYPE_LOOK = {
+  whatsapp: { icon: Smartphone, tone: "tone-ok" },
+  livechat: { icon: Globe, tone: "tone-sky" },
+  api: { icon: Webhook, tone: "tone-navy" },
+} as const;
+const look = (type: string) => TYPE_LOOK[type as keyof typeof TYPE_LOOK] ?? TYPE_LOOK.api;
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -58,19 +66,23 @@ export default async function ConnectedPlatformsPage({ searchParams }: { searchP
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
+        nav="/connected-platforms"
         title="Platform terhubung"
         description="Hubungkan WhatsApp dan livechat, lalu atur AI agent dan agen yang menangani tiap inbox."
-        actions={admin ? <Link href="/connected-platforms/new" className="btn btn-primary">+ Inbox baru</Link> : undefined}
+        actions={admin ? <Link href="/connected-platforms/new" className="btn btn-primary"><Plus aria-hidden="true" className="size-4" /> Inbox baru</Link> : undefined}
       />
 
       <div className="grid items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <section aria-label="Daftar inbox" className="card flex flex-col overflow-hidden">
-          <form role="search" className="border-b border-line-soft p-3">
+          <form role="search" className="relative border-b border-line-soft p-3">
             <label htmlFor="inbox-q" className="sr-only">Cari inbox</label>
-            <input id="inbox-q" name="q" defaultValue={q} className="field" placeholder="Cari nama atau nomor…" />
+            <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-6 size-4 -translate-y-1/2 text-muted" />
+            <input id="inbox-q" name="q" type="search" defaultValue={q} className="field !min-h-10 !pl-9 !text-sm" placeholder="Cari nama atau nomor…" />
           </form>
           {inboxes.length === 0 ? (
             <EmptyState
+              icon={q ? Search : RadioTower}
+              tone={q ? "navy" : "ok"}
               title={q ? "Tidak ditemukan" : "Belum ada inbox"}
               text={q ? `Tidak ada inbox yang cocok dengan "${q}".` : "Hubungkan WhatsApp atau buat livechat untuk mulai menerima pesan."}
               action={!q && admin ? <Link href="/connected-platforms/new" className="btn btn-secondary btn-sm">Buat inbox</Link> : undefined}
@@ -80,13 +92,19 @@ export default async function ConnectedPlatformsPage({ searchParams }: { searchP
               {inboxes.map((i) => {
                 const current = i.id === selected?.id;
                 const st = STATUS_BADGE[i.status] ?? STATUS_BADGE.connected;
+                const L = look(i.type);
                 return (
                   <li key={i.id}>
                     <Link
                       href={`/connected-platforms?${new URLSearchParams({ ...(q ? { q } : {}), i: i.id })}`}
                       aria-current={current ? "page" : undefined}
-                      className={`flex flex-col gap-1 border-b border-line-soft px-4 py-3 transition ${current ? "bg-brand-soft" : "hover:bg-bg"}`}
+                      className={`relative flex items-center gap-3 border-b border-line-soft px-4 py-3 transition ${current ? "bg-brand-soft" : "hover:bg-bg"}`}
                     >
+                      {current && <span aria-hidden="true" className="absolute top-2 bottom-2 left-0 w-1 rounded-r-full bg-brand" />}
+                      <span className={`icon-tile ${L.tone} ${i.active ? "" : "opacity-60"}`}>
+                        <L.icon aria-hidden="true" className="size-5" />
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate font-semibold text-navy">{i.name}</span>
                         {!i.active ? <span className="badge badge-muted">Nonaktif</span> : i.status !== "connected" ? <span className={st.cls}>{st.label}</span> : null}
@@ -95,6 +113,7 @@ export default async function ConnectedPlatformsPage({ searchParams }: { searchP
                         {INBOX_TYPE_LABEL[i.type] ?? i.type}
                         {i.connection_mode ? ` · ${MODE_LABEL[i.connection_mode]}` : ""}
                         {i.wa_display_phone ? ` · ${i.wa_display_phone}` : ""}
+                      </span>
                       </span>
                     </Link>
                   </li>
@@ -106,10 +125,18 @@ export default async function ConnectedPlatformsPage({ searchParams }: { searchP
 
         <section aria-label="Pengaturan inbox" className="card p-6">
           {!selected ? (
-            <EmptyState title="Belum ada inbox dipilih" text="Pilih inbox di sebelah kiri untuk melihat dan mengatur pengaturannya." />
+            <EmptyState icon={MousePointerClick} title="Belum ada inbox dipilih" text="Pilih inbox di sebelah kiri untuk melihat dan mengatur pengaturannya." />
           ) : (
             <div className="flex flex-col gap-6">
               <div className="flex flex-wrap items-center gap-3">
+                {(() => {
+                  const L = look(selected.type);
+                  return (
+                    <span className={`icon-tile icon-tile-lg ${L.tone}`}>
+                      <L.icon aria-hidden="true" className="size-6" />
+                    </span>
+                  );
+                })()}
                 <h2 className="text-xl font-bold text-navy">{selected.name}</h2>
                 <span className="badge badge-info">{INBOX_TYPE_LABEL[selected.type] ?? selected.type}</span>
                 {selected.type === "whatsapp" && <span className={(STATUS_BADGE[selected.status] ?? STATUS_BADGE.connected).cls}>{(STATUS_BADGE[selected.status] ?? STATUS_BADGE.connected).label}</span>}
@@ -141,7 +168,7 @@ export default async function ConnectedPlatformsPage({ searchParams }: { searchP
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="min-w-0 flex-1 overflow-x-auto rounded-lg border border-line-soft bg-bg px-3 py-2.5 font-mono text-[13px] whitespace-nowrap text-navy">{`${base}/w/${selected.widget_key}`}</code>
                     <CopyButton value={`${base}/w/${selected.widget_key}`} />
-                    <a href={`/w/${selected.widget_key}`} target="_blank" rel="noopener" className="btn btn-outline btn-sm">Buka widget uji ↗</a>
+                    <a href={`/w/${selected.widget_key}`} target="_blank" rel="noopener" className="btn btn-outline btn-sm">Buka widget uji <ExternalLink aria-hidden="true" className="size-4" /></a>
                   </div>
                   <details className="text-sm">
                     <summary className="cursor-pointer font-semibold text-navy">Kode sematan (iframe)</summary>

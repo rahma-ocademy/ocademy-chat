@@ -7,7 +7,7 @@ import { LEVEL_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, ROLE_LABEL, parsePermis
 import { seatUsage } from "@/lib/team/seats";
 import { InviteForm, InviteActions, MemberEditor, MemberStatusButton } from "./forms";
 
-export const metadata: Metadata = { title: "Pengguna" };
+export const metadata: Metadata = { title: "Tim & pengguna" };
 
 const date = (iso: string) => new Date(iso).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", year: "numeric" });
 
@@ -16,7 +16,7 @@ export default async function UsersPage() {
   if (!hasPermission(ctx, "user_management", "view")) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Pengguna" />
+        <PageHeader nav="/settings/users" title="Tim & pengguna" />
         <Notice tone="info">Anda tidak punya akses ke pengelolaan pengguna. Minta owner memberi izin “Pengguna”.</Notice>
       </div>
     );
@@ -50,7 +50,7 @@ export default async function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Pengguna" description="Undang anggota tim, atur peran dan izinnya, dan nonaktifkan akses bila perlu." />
+      <PageHeader nav="/settings/users" title="Tim & pengguna" description="Undang anggota tim, atur peran dan izinnya, dan nonaktifkan akses bila perlu." />
 
       <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (

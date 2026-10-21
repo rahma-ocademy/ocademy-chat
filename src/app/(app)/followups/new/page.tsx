@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireContext } from "@/lib/auth";
+import { FileText } from "lucide-react";
 import { EmptyState } from "@/components/page";
 import { Wizard, type TemplateOption } from "./wizard";
 
@@ -20,6 +21,8 @@ export default async function NewFollowupPage() {
     return (
       <div className="card">
         <EmptyState
+          icon={FileText}
+          tone="sky"
           title="Buat template dulu"
           text="Aturan follow-up memakai template pesan. Buat satu template, atau impor dari OrderOnline."
           action={

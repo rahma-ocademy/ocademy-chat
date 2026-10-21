@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { SubmitButton } from "@/components/ui";
+import { InfoTip, SubmitButton } from "@/components/ui";
 import { connectWhatsAppEmbedded, connectWhatsAppManual, type FormState } from "../../actions";
 
 type FBLoginResponse = { authResponse?: { code?: string } | null };
@@ -123,8 +123,29 @@ export function EmbeddedSignup({ appId, configId, graphVersion, mode }: { appId:
     <div className="flex flex-col gap-3">
       {mode === "cloud_api" && (
         <div>
-          <label htmlFor="wa-pin" className="label">PIN verifikasi 2 langkah (6 digit)</label>
-          <input id="wa-pin" className="field" inputMode="numeric" autoComplete="off" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <label htmlFor="wa-pin" className="label !mb-0">PIN verifikasi 2 langkah (6 digit)</label>
+            <InfoTip label="Apa itu PIN verifikasi 2 langkah?">
+              <strong className="block font-bold">Untuk apa PIN ini?</strong>
+              PIN dipakai untuk mendaftarkan (mengaktifkan) nomor ke WhatsApp Cloud API. Nomor belum punya PIN? Angka yang Anda isi
+              otomatis menjadi PIN-nya. Sudah punya? Isi PIN yang sama.
+              <strong className="mt-2 block font-bold">Simpan baik-baik</strong>
+              PIN diminta lagi saat nomor didaftarkan ulang atau dipindah. Kami tidak menyimpannya. Lupa PIN? Ubah di WhatsApp Manager →
+              Nomor telepon → Verifikasi dua langkah.
+            </InfoTip>
+          </div>
+          <input
+            id="wa-pin"
+            className="field font-mono tracking-[0.3em]"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={6}
+            placeholder="••••••"
+            aria-describedby="wa-pin-hint"
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          />
+          <p id="wa-pin-hint" className="hint">Mengaktifkan nomor di Cloud API. Catat PIN ini, dibutuhkan bila nomor dipindah.</p>
         </div>
       )}
       <button type="button" className="btn btn-primary" onClick={start} disabled={!ready || busy}>

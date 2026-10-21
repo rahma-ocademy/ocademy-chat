@@ -36,8 +36,9 @@ export default async function NewWhatsAppPage({ searchParams }: { searchParams: 
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/connected-platforms/new" className="text-sm font-semibold text-brand hover:underline">← Pilih platform</Link>
       <PageHeader
+        nav="/connected-platforms"
+        back={{ href: "/connected-platforms/new", label: "Pilih platform" }}
         title={mode === "coexistence" ? "WhatsApp Business App (Coexistence)" : "WhatsApp Business API (WABA)"}
         description={
           mode === "coexistence"

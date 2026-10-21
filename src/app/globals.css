@@ -21,16 +21,47 @@
   --color-warn-soft: #FDF0D5;
   --color-bad: #B42318;
   --color-bad-soft: #FDECEA;
+  /* Aksen per area (ikon menu, kartu statistik). Teks di atas varian -soft memakai warna gelapnya (≥ 4.5:1). */
+  --color-violet: #5B3CC4;
+  --color-violet-soft: #F1EDFD;
+  --color-amber: #8A5300;
+  --color-amber-soft: #FFF3DC;
+  --color-sky: #1D5FA8;
+  --color-sky-soft: #E8F1FC;
+  --color-rose: #B4235A;
+  --color-rose-soft: #FDEBF2;
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-dm-mono), ui-monospace, monospace;
-  --radius-card: 12px;
+  --radius-card: 14px;
   --shadow-card: 0 1px 2px rgb(41 56 103 / 0.05), 0 8px 24px rgb(41 56 103 / 0.05);
+  --shadow-pop: 0 2px 4px rgb(41 56 103 / 0.06), 0 16px 36px rgb(41 56 103 / 0.12);
+}
+
+:root {
+  /* Navy → tosca gelap. Teks putih di atas seluruh rentang ≥ 4.7:1. */
+  --gradient-brand: linear-gradient(135deg, #293867 0%, #1f5c80 55%, #017f8c 100%);
 }
 
 body {
-  background: var(--color-bg);
+  background:
+    radial-gradient(900px 480px at 100% -10%, rgb(2 177 195 / 0.07), transparent 70%),
+    radial-gradient(700px 420px at -10% 110%, rgb(41 56 103 / 0.05), transparent 70%),
+    var(--color-bg);
+  background-attachment: fixed;
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
 @layer components {
@@ -109,5 +140,85 @@ body {
   }
   .table tbody tr {
     @apply transition-colors hover:bg-[#F8FAFE];
+  }
+
+  /* ─── Komponen visual: gradien, ikon berwarna, chip, skeleton, tooltip ───── */
+  .bg-brand-gradient {
+    background-image: var(--gradient-brand);
+  }
+  .card-hover {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:border-[#C9E4EA] hover:shadow-[var(--shadow-pop)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent;
+  }
+  .icon-tile {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-xl;
+  }
+  .icon-tile-sm { @apply size-8 rounded-lg; }
+  .icon-tile-lg { @apply size-12 rounded-2xl; }
+  .tone-brand { @apply bg-[#E3F5F7] text-brand; }
+  .tone-navy { @apply bg-tint text-navy; }
+  .tone-violet { @apply bg-violet-soft text-violet; }
+  .tone-amber { @apply bg-amber-soft text-amber; }
+  .tone-sky { @apply bg-sky-soft text-sky; }
+  .tone-rose { @apply bg-rose-soft text-rose; }
+  .tone-ok { @apply bg-ok-soft text-ok; }
+  .tone-bad { @apply bg-bad-soft text-bad; }
+
+  .hero {
+    @apply relative overflow-hidden rounded-2xl p-6 text-white shadow-[var(--shadow-pop)] sm:p-8;
+    background-image: var(--gradient-brand);
+  }
+  .hero::before,
+  .hero::after {
+    content: "";
+    @apply pointer-events-none absolute rounded-full;
+  }
+  .hero::before {
+    @apply -top-16 -right-10 size-56 bg-white/[0.06];
+  }
+  .hero::after {
+    @apply -right-20 -bottom-24 size-64 bg-accent/15;
+  }
+  .hero > * { @apply relative; }
+
+  .chip {
+    @apply inline-flex min-h-8 items-center gap-1.5 rounded-full border border-line-soft bg-white px-3 text-[13px] font-semibold text-muted transition hover:border-brand hover:text-navy focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent;
+  }
+  .chip-on {
+    @apply border-brand bg-brand-soft text-[#01606A];
+  }
+
+  .skeleton {
+    @apply rounded-lg;
+    background: linear-gradient(90deg, var(--color-tint) 0%, #f7f9fd 50%, var(--color-tint) 100%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  .rise {
+    animation: rise 0.25s ease-out both;
+  }
+
+  .kbd {
+    @apply rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[11px] text-muted shadow-[0_1px_0_var(--color-line)];
+  }
+
+  .progress {
+    @apply h-2 overflow-hidden rounded-full bg-tint;
+  }
+  .progress > span {
+    @apply block h-full rounded-full transition-[width] duration-500;
+  }
+
+  /* Tooltip CSS sederhana untuk tombol ikon: <button data-tip="…" aria-label="…">. */
+  [data-tip] {
+    @apply relative;
+  }
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    content: attr(data-tip);
+    @apply pointer-events-none absolute top-1/2 left-full z-50 ml-2 -translate-y-1/2 rounded-md bg-navy px-2 py-1 text-xs font-semibold whitespace-nowrap text-white shadow-lg;
+  }
+  [data-tip-pos="bottom"]:hover::after,
+  [data-tip-pos="bottom"]:focus-visible::after {
+    @apply top-full left-1/2 mt-2 ml-0 -translate-x-1/2 translate-y-0;
   }
 }

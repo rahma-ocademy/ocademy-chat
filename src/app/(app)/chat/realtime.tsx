@@ -41,10 +41,18 @@ export function Realtime({ businessId }: { businessId: string }) {
     };
   }, [businessId, router]);
 
+  const text = live === "live" ? "Realtime aktif" : live === "polling" ? "Menyegarkan tiap 10 detik" : "Menghubungkan…";
   return (
-    <p className="flex items-center gap-2 self-end text-xs text-muted" role="status">
-      <span aria-hidden="true" className={`size-2 rounded-full ${live === "live" ? "bg-ok" : live === "polling" ? "bg-warn" : "bg-line"}`} />
-      {live === "live" ? "Realtime aktif" : live === "polling" ? "Realtime tidak tersedia — menyegarkan tiap 10 detik" : "Menghubungkan…"}
+    <p
+      className="flex items-center gap-2 border-t border-line-soft px-4 py-2 text-[11px] font-semibold text-muted"
+      role="status"
+      title={live === "polling" ? "Realtime tidak tersedia, inbox disegarkan tiap 10 detik" : undefined}
+    >
+      <span aria-hidden="true" className="relative flex size-2">
+        {live === "live" && <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />}
+        <span className={`relative inline-flex size-2 rounded-full ${live === "live" ? "bg-accent" : live === "polling" ? "bg-[#E0A100]" : "bg-line"}`} />
+      </span>
+      {text}
     </p>
   );
 }

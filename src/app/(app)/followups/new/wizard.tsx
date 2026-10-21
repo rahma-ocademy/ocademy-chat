@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeft, ArrowRight, Check, Zap } from "lucide-react";
 import { useState, useTransition } from "react";
 import { EVENTS, eventLabel } from "@/lib/followups/events";
 import { createRule } from "../actions";
@@ -66,14 +67,26 @@ export function Wizard({ templates }: { templates: TemplateOption[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className="text-sm font-medium text-brand">Buat follow-up · Langkah {step + 1} dari {STEPS.length}</p>
-        <h1 className="mt-1 text-[28px] font-bold text-navy">
-          {["Kapan follow-up dikirim?", "Pesan apa dan kapan?", "Jadwal & aturan berhenti", "Periksa & aktifkan"][step]}
-        </h1>
+      <div className="flex flex-col gap-3">
+        <Link href="/followups" className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-[#01606A] hover:underline">
+          <ArrowLeft aria-hidden="true" className="size-4" /> Follow-up otomatis
+        </Link>
+        <div className="flex items-start gap-4">
+          <span className="icon-tile icon-tile-lg tone-amber hidden sm:inline-flex"><Zap aria-hidden="true" className="size-6" /></span>
+          <div>
+            <p className="text-xs font-bold tracking-[0.08em] text-brand uppercase">Buat follow-up · Langkah {step + 1} dari {STEPS.length}</p>
+            <h1 className="mt-0.5 text-[28px] leading-tight font-bold text-navy">
+              {["Kapan follow-up dikirim?", "Pesan apa dan kapan?", "Jadwal & aturan berhenti", "Periksa & aktifkan"][step]}
+            </h1>
+          </div>
+        </div>
       </div>
 
-      <ol aria-label="Langkah" className="flex flex-wrap gap-2">
+      <div className="progress" aria-hidden="true">
+        <span className="bg-brand-gradient" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+      </div>
+
+      <ol aria-label="Langkah" className="-mt-2 flex flex-wrap gap-2">
         {STEPS.map((label, i) => {
           const now = i === step;
           const done = i < step;
@@ -86,7 +99,7 @@ export function Wizard({ templates }: { templates: TemplateOption[] }) {
               }`}
             >
               <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold ${now ? "bg-brand text-white" : done ? "bg-ok-soft text-ok" : "bg-tint text-muted"}`}>
-                {done ? "✓" : i + 1}
+                {done ? <Check aria-hidden="true" className="size-4" strokeWidth={3} /> : i + 1}
               </span>
               <span className={`text-sm ${now ? "font-bold text-navy" : "text-muted"}`}>{label}</span>
             </li>
@@ -235,18 +248,18 @@ export function Wizard({ templates }: { templates: TemplateOption[] }) {
         {error && <p role="alert" className="rounded-lg bg-bad-soft px-3.5 py-2.5 text-sm text-[#912018]">{error}</p>}
       </div>
 
-      <div className="card flex flex-wrap items-center justify-between gap-3 p-3.5">
+      <div className="card sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-3 p-3.5 shadow-[var(--shadow-pop)]">
         {step === 0 ? (
           <Link href="/followups" className="btn btn-secondary btn-lg">Batal</Link>
         ) : (
-          <button type="button" className="btn btn-secondary btn-lg" onClick={() => { setError(null); setStep(step - 1); }}>← Kembali</button>
+          <button type="button" className="btn btn-secondary btn-lg" onClick={() => { setError(null); setStep(step - 1); }}><ArrowLeft aria-hidden="true" className="size-4" /> Kembali</button>
         )}
         {step < STEPS.length - 1 ? (
-          <button type="button" className="btn btn-primary btn-lg" onClick={next}>Lanjut →</button>
+          <button type="button" className="btn btn-primary btn-lg" onClick={next}>Lanjut <ArrowRight aria-hidden="true" className="size-4" /></button>
         ) : (
           <div className="flex flex-wrap gap-2.5">
             <button type="button" className="btn btn-secondary btn-lg" disabled={pending} onClick={() => submit(false)}>Simpan sebagai draf</button>
-            <button type="button" className="btn btn-primary btn-lg" disabled={pending} onClick={() => submit(true)}>{pending ? "Menyimpan…" : "✓ Aktifkan follow-up"}</button>
+            <button type="button" className="btn btn-primary btn-lg" disabled={pending} onClick={() => submit(true)}>{pending ? "Menyimpan…" : <><Check aria-hidden="true" className="size-4" strokeWidth={3} /> Aktifkan follow-up</>}</button>
           </div>
         )}
       </div>
