@@ -92,6 +92,19 @@ npm run dev                  # http://localhost:3000
 1. Buat Meta App (tipe Business) dengan produk **WhatsApp** dan **Facebook Login for Business**; buat konfigurasi *WhatsApp Embedded Signup* → isi `META_APP_ID`, `META_APP_SECRET`, `META_ES_CONFIG_ID`. Domain aplikasi harus terdaftar di pengaturan Login (Embedded Signup butuh HTTPS).
 2. Meta App → WhatsApp → **Configuration** → Webhook: URL `https://DOMAIN/api/webhooks/whatsapp`, verify token = `WHATSAPP_VERIFY_TOKEN`. Langganan field `messages`; untuk Coexistence juga `smb_message_echoes`, `history`, `smb_app_state_sync`.
 3. Di aplikasi: **Platform terhubung → + Inbox baru → WhatsApp Business App (Coexistence)** atau **WABA**.
+
+URL yang diisi di Meta App (ganti `DOMAIN` dengan domain HTTPS aplikasi, mis. `ocademy-chat.vercel.app`):
+
+| Pengaturan Meta App | Nilai |
+|---|---|
+| App settings → Basic → App Domains | `DOMAIN` |
+| App settings → Basic → Privacy Policy URL | `https://DOMAIN/privacy` |
+| App settings → Basic → User data deletion (Data Deletion Instructions URL) | `https://DOMAIN/privacy#hapus-data` |
+| Facebook Login for Business → Settings → Valid OAuth Redirect URIs | `https://DOMAIN/auth/meta/callback` |
+| Facebook Login for Business → Settings → Allowed Domains for the JavaScript SDK | `https://DOMAIN` |
+| WhatsApp → Configuration → Callback URL (webhook) | `https://DOMAIN/api/webhooks/whatsapp` |
+
+Embedded Signup memakai popup JS SDK, jadi `code` ditukar tanpa `redirect_uri`; `/auth/meta/callback` adalah cadangan bila Meta mengarahkan ke redirect URI.
    Tanpa Embedded Signup, WABA bisa dihubungkan manual (Phone number ID, WABA ID, token System User) — cocok untuk nomor uji dari Meta App Dashboard.
 
 ### 5. Worker
