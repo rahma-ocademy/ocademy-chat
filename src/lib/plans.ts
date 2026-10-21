@@ -11,7 +11,18 @@ export type Entitlements = {
   features: string[];
 };
 
+export const ALL_FEATURES: Feature[] = ["open_api", "followup", "analytics", "ticketing", "flow", "automation", "csat", "ai_full"];
+
+/**
+ * Pembatasan paket SEMENTARA DIMATIKAN: semua bisnis mendapat semua fitur tanpa batas kuota,
+ * kecuali env PLAN_ENFORCEMENT=on. Nyalakan lagi saat billing/penggantian paket sudah siap.
+ */
+export const planEnforced = () => process.env.PLAN_ENFORCEMENT === "on";
+
+const UNLOCKED: Entitlements = { planId: "unlocked", planName: "Semua fitur", limits: {}, features: ALL_FEATURES };
+
 export async function getEntitlements(admin: Admin, businessId: string): Promise<Entitlements | null> {
+  if (!planEnforced()) return UNLOCKED;
   const { data } = await admin
     .from("subscriptions")
     .select("status, plans(id, name, limits, features)")
