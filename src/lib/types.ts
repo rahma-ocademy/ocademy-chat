@@ -15,6 +15,10 @@ export type TemplateRow = {
   channel: "whatsapp" | "any";
   wa_template_name: string | null;
   wa_param_map: Record<string, string>;
+  /** Status persetujuan Meta (0004): APPROVED, PENDING, REJECTED, PAUSED, DISABLED, NOT_FOUND, … null = belum dicek. */
+  wa_status: string | null;
+  wa_status_reason: string | null;
+  wa_status_checked_at: string | null;
   source: Source;
   integration_id: string | null;
   external_ref: string | null;

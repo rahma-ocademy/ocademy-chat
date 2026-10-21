@@ -63,7 +63,7 @@ npm run dev                  # http://localhost:3000
 ### 1. Siapkan Supabase
 
 1. Buat project di <https://supabase.com>.
-2. Buka **SQL Editor**, jalankan berurutan [`0001_init.sql`](supabase/migrations/0001_init.sql), [`0002_inbox.sql`](supabase/migrations/0002_inbox.sql), lalu [`0003_platforms_team_ai.sql`](supabase/migrations/0003_platforms_team_ai.sql) (atau `supabase db push` bila memakai Supabase CLI). `0002` juga menambahkan tabel `messages` dan `conversations` ke publikasi Realtime.
+2. Buka **SQL Editor**, jalankan berurutan [`0001_init.sql`](supabase/migrations/0001_init.sql), [`0002_inbox.sql`](supabase/migrations/0002_inbox.sql), [`0003_platforms_team_ai.sql`](supabase/migrations/0003_platforms_team_ai.sql), lalu [`0004_template_meta_status.sql`](supabase/migrations/0004_template_meta_status.sql) (atau `supabase db push` bila memakai Supabase CLI). `0002` juga menambahkan tabel `messages` dan `conversations` ke publikasi Realtime.
 3. **Project Settings → API**: salin `Project URL`, kunci `anon`/publishable, dan `service_role` ke `.env.local`.
 4. **Authentication → Providers → Email**: untuk uji lokal cepat, matikan *Confirm email*. Bila dibiarkan aktif, bisnis dibuat otomatis saat login pertama setelah konfirmasi.
 

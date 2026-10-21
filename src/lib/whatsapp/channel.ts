@@ -5,6 +5,7 @@ import { normalizePhone } from "@/lib/phone";
 import { cancelOnReply } from "@/lib/followups/engine";
 import { GraphError, OUTSIDE_WINDOW, sendTemplate, sendText } from "./graph";
 import { waTime, type WaEvent } from "./webhook";
+import { applyTemplateStatusUpdate } from "./template-status";
 
 /**
  * Jembatan WhatsApp ↔ database: menyimpan pesan masuk/echo/status dari webhook dan mengirim pesan keluar.
@@ -22,7 +23,7 @@ export async function saveToken(admin: Admin, inboxId: string, token: string) {
   if (error) throw new Error(`Gagal menyimpan token: ${error.message}`);
 }
 
-async function loadToken(admin: Admin, inboxId: string): Promise<string | null> {
+export async function loadToken(admin: Admin, inboxId: string): Promise<string | null> {
   const { data } = await admin.from("channel_secrets").select("ciphertext").eq("inbox_id", inboxId).maybeSingle();
   return data ? decryptSecret(data.ciphertext as string) : null;
 }
@@ -122,6 +123,11 @@ export async function applyEvents(admin: Admin, events: WaEvent[]): Promise<Appl
   };
 
   for (const ev of events) {
+    // Event template milik WABA (bukan nomor tertentu): tidak butuh inbox.
+    if (ev.kind === "template_status") {
+      await applyTemplateStatusUpdate(admin, ev);
+      continue;
+    }
     const inbox = await inboxFor(ev.phoneNumberId);
     if (!inbox) {
       summary.unknownNumber += 1;

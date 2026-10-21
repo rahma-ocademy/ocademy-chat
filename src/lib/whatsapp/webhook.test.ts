@@ -83,3 +83,17 @@ it("waTime", () => {
   const now = new Date("2026-01-01T00:00:00Z");
   expect(waTime("", now)).toBe(now.toISOString());
 });
+
+describe("parseWebhook: message_template_status_update", () => {
+  it("menghasilkan event template_status dengan WABA, nama, bahasa, dan alasan", () => {
+    const ev = parseWebhook(
+      wrap("message_template_status_update", { event: "REJECTED", message_template_name: "pengingat_bayar", message_template_language: "id", reason: "INCORRECT_CATEGORY" }),
+    );
+    expect(ev).toEqual([{ kind: "template_status", phoneNumberId: null, wabaId: "WABA1", name: "pengingat_bayar", language: "id", status: "REJECTED", reason: "INCORRECT_CATEGORY" }]);
+  });
+
+  it("alasan NONE dianggap kosong", () => {
+    const [ev] = parseWebhook(wrap("message_template_status_update", { event: "APPROVED", message_template_name: "x", reason: "NONE" }));
+    expect(ev).toMatchObject({ kind: "template_status", status: "APPROVED", reason: null, language: null });
+  });
+});

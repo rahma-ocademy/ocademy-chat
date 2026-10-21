@@ -130,3 +130,25 @@ export async function sendTemplate(token: string, phoneNumberId: string, to: str
 
 /** Kode error Meta yang artinya "di luar jendela 24 jam, pakai template". */
 export const OUTSIDE_WINDOW = 131047;
+
+export type MetaTemplate = { name: string; language: string; status: string; category: string | null; rejected_reason: string | null };
+
+/** Semua template pesan di WABA beserta status persetujuan Meta (mengikuti paging, maks. 1.000 template). */
+export async function listMessageTemplates(token: string, wabaId: string): Promise<MetaTemplate[]> {
+  type Page = { data?: { name?: string; language?: string; status?: string; category?: string; rejected_reason?: string }[]; paging?: { cursors?: { after?: string }; next?: string } };
+  const out: MetaTemplate[] = [];
+  let after: string | undefined;
+  for (let i = 0; i < 10; i++) {
+    const r = await call<Page>(`${encodeURIComponent(wabaId)}/message_templates`, {
+      token,
+      query: { fields: "name,language,status,category,rejected_reason", limit: "100", ...(after ? { after } : {}) },
+    });
+    for (const t of r.data ?? []) {
+      if (!t.name || !t.status) continue;
+      out.push({ name: t.name, language: t.language ?? "", status: t.status.toUpperCase(), category: t.category ?? null, rejected_reason: t.rejected_reason && t.rejected_reason !== "NONE" ? t.rejected_reason : null });
+    }
+    after = r.paging?.next ? r.paging.cursors?.after : undefined;
+    if (!after) break;
+  }
+  return out;
+}

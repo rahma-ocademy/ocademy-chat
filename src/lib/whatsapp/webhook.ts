@@ -11,6 +11,7 @@ export type WaEvent =
   | { kind: "message"; phoneNumberId: string; waId: string; profileName: string | null; id: string; timestamp: string; body: string }
   | { kind: "echo"; phoneNumberId: string; to: string; id: string; timestamp: string; body: string }
   | { kind: "status"; phoneNumberId: string; id: string; status: "sent" | "delivered" | "read" | "failed"; error: string | null }
+  | { kind: "template_status"; phoneNumberId: null; wabaId: string | null; name: string; language: string | null; status: string; reason: string | null }
   | { kind: "other"; phoneNumberId: string | null; wabaId: string | null; field: string; value: unknown };
 
 /** Verifikasi header X-Hub-Signature-256 (HMAC-SHA256 body mentah dengan App Secret). */
@@ -118,6 +119,17 @@ export function parseWebhook(payload: unknown): WaEvent[] {
           events.push({ kind: "echo", phoneNumberId, to, id, timestamp: str(m.timestamp) ?? "", body: messageText(m) || "[Pesan kosong]" });
         }
         continue;
+      }
+
+      // Meta menyetujui/menolak/menjeda template pesan.
+      if (field === "message_template_status_update" && value) {
+        const name = str(value.message_template_name);
+        const status = str(value.event);
+        if (name && status) {
+          const reason = str(value.reason);
+          events.push({ kind: "template_status", phoneNumberId: null, wabaId, name, language: str(value.message_template_language), status, reason: reason && reason !== "NONE" ? reason : null });
+          continue;
+        }
       }
 
       events.push({ kind: "other", phoneNumberId, wabaId, field, value: change?.value ?? null });

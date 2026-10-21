@@ -204,7 +204,7 @@ export function StepList({
 }
 
 export const sourceBadge = (s: string) =>
-  s === "orderonline" ? { cls: "badge badge-info", label: "OrderOnline" } : s === "api" ? { cls: "badge badge-info", label: "API" } : { cls: "badge badge-muted", label: "Di aplikasi" };
+  s === "orderonline" ? { cls: "badge badge-info", label: "OrderOnline" } : s === "api" ? { cls: "badge badge-info", label: "API" } : { cls: "badge badge-muted", label: "Buatan sendiri" };
 
 export function PageSkeleton() {
   return (
