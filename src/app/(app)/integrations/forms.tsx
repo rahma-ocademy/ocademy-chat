@@ -3,11 +3,12 @@
 import { useActionState, useState, useTransition } from "react";
 import { connectOrderOnline, createApiKey, disconnectOrderOnline, resyncOrderOnline, revokeApiKey, type KeyState, type OOState } from "./actions";
 import { CopyButton, SubmitButton } from "@/components/ui";
-import { Notice } from "@/components/page";
+import { useResultToast, useToast } from "@/components/toast";
 import { SCOPES_INFO } from "./scopes";
 
 export function CreateKeyForm() {
   const [state, action] = useActionState<KeyState, FormData>(createApiKey, {});
+  useResultToast(state.key ? { message: `Kunci untuk “${state.name}” dibuat. Salin sekarang.` } : state);
   return (
     <form action={action} className="flex flex-col gap-4">
       <div className="max-w-md">
@@ -25,7 +26,6 @@ export function CreateKeyForm() {
           ))}
         </div>
       </fieldset>
-      {state.error && <Notice tone="bad">{state.error}</Notice>}
       {state.key && (
         <div className="flex flex-col gap-3 rounded-xl border border-[#BFE5D8] bg-ok-soft p-4">
           <p className="text-sm font-bold text-ok">Kunci untuk “{state.name}” dibuat. Salin sekarang: kunci ini tidak akan ditampilkan lagi.</p>
@@ -42,13 +42,20 @@ export function CreateKeyForm() {
 
 export function RevokeButton({ id, name }: { id: string; name: string }) {
   const [pending, start] = useTransition();
+  const toast = useToast();
   return (
     <button
       type="button"
       className="btn btn-danger btn-sm"
       disabled={pending}
       onClick={() => {
-        if (window.confirm(`Cabut kunci "${name}"? Aplikasi yang memakainya langsung kehilangan akses.`)) start(async () => { await revokeApiKey(id); });
+        if (window.confirm(`Cabut kunci "${name}"? Aplikasi yang memakainya langsung kehilangan akses.`)) {
+          start(async () => {
+            const r = await revokeApiKey(id);
+            if (r.error) toast.error(r.error);
+            else toast.success(`Kunci "${name}" dicabut.`);
+          });
+        }
       }}
     >
       {pending ? "Mencabut…" : "Cabut"}
@@ -58,19 +65,18 @@ export function RevokeButton({ id, name }: { id: string; name: string }) {
 
 export function ConnectOrderOnlineForm() {
   const [state, action] = useActionState<OOState, FormData>(connectOrderOnline, {});
+  useResultToast(state);
   const [show, setShow] = useState(false);
   return (
     <form action={action} className="flex flex-col gap-4">
       <div>
-        <label htmlFor="oo-token" className="label">Open API Token OrderOnline</label>
+        <label htmlFor="oo-token" className="label">Personal Access Token OrderOnline</label>
         <div className="flex flex-wrap gap-2">
           <input id="oo-token" name="token" type={show ? "text" : "password"} autoComplete="off" spellCheck={false} className="field min-w-64 flex-1 font-mono text-sm" required />
           <button type="button" className="btn btn-secondary" onClick={() => setShow((s) => !s)}>{show ? "Sembunyikan" : "Tampilkan"}</button>
         </div>
         <p className="hint">Token disimpan terenkripsi dan bisa dicabut kapan saja dengan memutus integrasi.</p>
       </div>
-      {state.error && <Notice tone="bad">{state.error}</Notice>}
-      {state.message && <Notice tone="ok">{state.message}</Notice>}
       <SubmitButton className="btn btn-primary btn-lg self-start" pending="Menghubungkan…">Hubungkan &amp; impor template</SubmitButton>
     </form>
   );
@@ -79,6 +85,7 @@ export function ConnectOrderOnlineForm() {
 export function OrderOnlineActions() {
   const [msg, setMsg] = useState<OOState>({});
   const [pending, start] = useTransition();
+  useResultToast(msg);
   const run = (fn: () => Promise<OOState>) => start(async () => setMsg(await fn()));
   return (
     <div className="flex flex-col gap-3">
@@ -95,8 +102,6 @@ export function OrderOnlineActions() {
           Putuskan
         </button>
       </div>
-      {msg.error && <Notice tone="bad">{msg.error}</Notice>}
-      {msg.message && <Notice tone="ok">{msg.message}</Notice>}
     </div>
   );
 }

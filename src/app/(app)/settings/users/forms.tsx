@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { CopyButton, SubmitButton } from "@/components/ui";
+import { useResultToast, useToast } from "@/components/toast";
 import { LEVEL_LABEL, LEVELS, PERMISSION_KEYS, PERMISSION_LABEL, type Permissions } from "@/lib/team/permissions";
 import { inviteMember, resendInvite, revokeInvite, setMemberStatus, updateMember, type InviteResult } from "./actions";
 
@@ -41,6 +42,7 @@ function InviteLink({ result }: { result: InviteResult }) {
 
 export function InviteForm({ seatsFull }: { seatsFull: boolean }) {
   const [state, action] = useActionState<InviteResult, FormData>(inviteMember, {});
+  useResultToast(state, "Undangan dibuat.");
   return (
     <form action={action} className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-3">
@@ -64,7 +66,6 @@ export function InviteForm({ seatsFull }: { seatsFull: boolean }) {
       {seatsFull && <p className="text-sm text-warn">Seat paket Anda sudah penuh. Batalkan undangan lain atau upgrade paket sebelum mengundang.</p>}
       <div className="flex flex-wrap items-center gap-3">
         <SubmitButton pending="Membuat undangan…">Buat undangan</SubmitButton>
-        {state.error && <p role="alert" className="text-sm text-bad">{state.error}</p>}
       </div>
       <InviteLink result={state} />
     </form>
@@ -74,10 +75,17 @@ export function InviteForm({ seatsFull }: { seatsFull: boolean }) {
 export function InviteActions({ id, email }: { id: string; email: string }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<InviteResult>({});
+  const [okText, setOkText] = useState("");
+  useResultToast(result, okText);
+  const run = (fn: () => Promise<InviteResult>, ok: string) =>
+    start(async () => {
+      setOkText(ok);
+      setResult(await fn());
+    });
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" className="btn btn-secondary btn-sm" disabled={pending} onClick={() => start(async () => setResult(await resendInvite(id)))}>
+        <button type="button" className="btn btn-secondary btn-sm" disabled={pending} onClick={() => run(() => resendInvite(id), "Link undangan baru dibuat.")}>
           Buat link baru
         </button>
         <button
@@ -85,13 +93,12 @@ export function InviteActions({ id, email }: { id: string; email: string }) {
           className="btn btn-danger btn-sm"
           disabled={pending}
           onClick={() => {
-            if (confirm(`Batalkan undangan untuk ${email}?`)) start(async () => setResult(await revokeInvite(id)));
+            if (confirm(`Batalkan undangan untuk ${email}?`)) run(() => revokeInvite(id), "Undangan dibatalkan.");
           }}
         >
           Batalkan
         </button>
       </div>
-      {result.error && <p role="alert" className="text-sm text-bad">{result.error}</p>}
       <div className="w-full max-w-md text-left"><InviteLink result={result} /></div>
     </div>
   );
@@ -100,6 +107,7 @@ export function InviteActions({ id, email }: { id: string; email: string }) {
 export function MemberEditor({ userId, label, role, permissions }: { userId: string; label: string; role: "admin" | "agent"; permissions: Permissions }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState<InviteResult, FormData>(updateMember, {});
+  useResultToast(state, "Izin anggota diperbarui.");
   if (!open) {
     return <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(true)} aria-label={`Ubah izin ${label}`}>Ubah</button>;
   }
@@ -117,8 +125,6 @@ export function MemberEditor({ userId, label, role, permissions }: { userId: str
       <div className="flex flex-wrap items-center gap-2">
         <SubmitButton pending="Menyimpan…" className="btn btn-primary btn-sm">Simpan</SubmitButton>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Tutup</button>
-        {state.error && <p role="alert" className="text-sm text-bad">{state.error}</p>}
-        {state.ok && <p role="status" className="text-sm text-ok">Tersimpan.</p>}
       </div>
     </form>
   );
@@ -126,7 +132,7 @@ export function MemberEditor({ userId, label, role, permissions }: { userId: str
 
 export function MemberStatusButton({ userId, label, active }: { userId: string; label: string; active: boolean }) {
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   return (
     <span className="flex flex-col items-end gap-1">
       <button
@@ -137,13 +143,13 @@ export function MemberStatusButton({ userId, label, active }: { userId: string; 
           if (active && !confirm(`Nonaktifkan ${label}? Ia tidak bisa masuk ke bisnis ini lagi dan percakapannya dilepas.`)) return;
           start(async () => {
             const r = await setMemberStatus(userId, active ? "deactivated" : "active");
-            setError(r.error ?? null);
+            if (r.error) toast.error(r.error);
+            else toast.success(active ? `${label} dinonaktifkan.` : `${label} diaktifkan.`);
           });
         }}
       >
         {active ? "Nonaktifkan" : "Aktifkan"}
       </button>
-      {error && <span role="alert" className="text-xs text-bad">{error}</span>}
     </span>
   );
 }

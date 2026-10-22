@@ -1,22 +1,25 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { useToast } from "@/components/toast";
 import { acceptInvite } from "./actions";
 
 export function AcceptButton({ token }: { token: string }) {
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   return (
     <div className="flex flex-col gap-2">
       <button
         type="button"
         className="btn btn-primary btn-lg"
         disabled={pending}
-        onClick={() => start(async () => setError((await acceptInvite(token))?.error ?? null))}
+        onClick={() => start(async () => {
+          const r = await acceptInvite(token);
+          if (r?.error) toast.error(r.error);
+        })}
       >
         {pending ? "Bergabung…" : "Terima undangan"}
       </button>
-      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
     </div>
   );
 }

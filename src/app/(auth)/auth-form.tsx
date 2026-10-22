@@ -5,10 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
 import { login, register, type AuthState } from "./actions";
 import { SubmitButton } from "@/components/ui";
+import { useResultToast } from "@/components/toast";
 import { isInvitePath, safeNext } from "@/lib/safe-next";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [state, action] = useActionState<AuthState, FormData>(mode === "login" ? login : register, {});
+  useResultToast(state);
   const isLogin = mode === "login";
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
@@ -44,9 +46,6 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <input id="password" name="password" type="password" className="field" autoComplete={isLogin ? "current-password" : "new-password"} minLength={8} required />
         {!isLogin && <p className="hint">Minimal 8 karakter.</p>}
       </div>
-
-      {state.error && <p role="alert" className="rounded-lg bg-bad-soft px-3.5 py-2.5 text-sm text-[#912018]">{state.error}</p>}
-      {state.message && <p role="status" className="rounded-lg bg-ok-soft px-3.5 py-2.5 text-sm text-ok">{state.message}</p>}
 
       <SubmitButton className="btn btn-primary btn-lg w-full" pending={isLogin ? "Masuk…" : "Mendaftar…"}>
         {isLogin ? "Masuk" : "Daftar"}

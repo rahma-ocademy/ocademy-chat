@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CircleCheckBig, FileText, PenLine, Plus, ShoppingBag, TriangleAlert, Webhook, type LucideIcon } from "lucide-react";
-import { requireContext } from "@/lib/auth";
+import { isAdmin, requireContext } from "@/lib/auth";
 import { EmptyState, PageHeader } from "@/components/page";
 import { InfoTip } from "@/components/ui";
 import type { Source, TemplateRow } from "@/lib/types";
 import { metaStatusView } from "@/lib/whatsapp/template-status-match";
-import { ArchiveButton, RefreshStatusButton, TemplateForm } from "./template-form";
+import { RefreshStatusButton, TemplateForm, TemplateRowActions } from "./template-form";
 
 export const metadata: Metadata = { title: "Template pesan" };
 
@@ -33,7 +33,8 @@ const checkedAt = (iso: string | null) =>
   iso ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso)) : null;
 
 export default async function TemplatesPage({ searchParams }: { searchParams: SearchParams }) {
-  const { supabase, businessId } = await requireContext();
+  const ctx = await requireContext();
+  const { supabase, businessId } = ctx;
   const sp = await searchParams;
   const want = typeof sp.f === "string" ? sp.f : "";
   const { data } = await supabase
@@ -43,6 +44,15 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Se
     .neq("status", "archived")
     .order("created_at", { ascending: false });
   const all = (data ?? []) as TemplateRow[];
+  const canSubmit = isAdmin(ctx);
+  const { count: waCount } = await supabase
+    .from("inboxes")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", businessId)
+    .eq("type", "whatsapp")
+    .neq("status", "disconnected")
+    .not("wa_waba_id", "is", null);
+  const waConnected = (waCount ?? 0) > 0;
   const filter = FILTERS.find((f) => f.key === want) ?? FILTERS[0];
   const list = all.filter(filter.match);
 
@@ -65,7 +75,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Se
           </span>
           <span className="text-[17px] font-bold text-navy">Buat template baru</span>
         </summary>
-        <div className="border-t border-line-soft p-6"><TemplateForm /></div>
+        <div className="border-t border-line-soft p-6"><TemplateForm waConnected={waConnected} /></div>
       </details>
 
       <section aria-labelledby="h-templates" className="card overflow-hidden">
@@ -168,7 +178,13 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Se
                           </p>
                         )}
                       </td>
-                      <td className="text-right"><ArchiveButton id={t.id} name={t.name} /></td>
+                      <td className="text-right">
+                        <TemplateRowActions
+                          template={{ id: t.id, name: t.name, body: t.body ?? "", waName: t.wa_template_name, waStatus: t.wa_status }}
+                          canSubmit={canSubmit}
+                          waConnected={waConnected}
+                        />
+                      </td>
                     </tr>
                   );
                 })}

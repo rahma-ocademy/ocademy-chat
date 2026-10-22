@@ -98,7 +98,7 @@ export async function ingestEvent(admin: Admin, input: IngestInput, now = new Da
         dedupe_ref: orderRef,
         step_index: i,
         template_id: step.template_id,
-        progress_key: rule.integration_id ? rule.external_ref : null,
+        progress_key: rule.integration_id ? (rule.external_ref?.split(":")[0] ?? null) : null, // "follow_up_1:<hash>…" → "follow_up_1"
         contact: input.contact,
         data: input.data,
         scheduled_at: computeScheduledAt(now, step, rule.send_window ?? { mode: "anytime" }).toISOString(),

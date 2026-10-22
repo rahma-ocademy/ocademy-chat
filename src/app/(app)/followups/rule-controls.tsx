@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useToast } from "@/components/toast";
 import { deleteRule, toggleRule } from "./actions";
 
 export function RuleToggle({ id, active, label }: { id: string; active: boolean; label: string }) {
   const [checked, setChecked] = useState(active);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, start] = useTransition();
 
   return (
@@ -20,23 +21,24 @@ export function RuleToggle({ id, active, label }: { id: string; active: boolean;
         onChange={(e) => {
           const next = e.target.checked;
           setChecked(next);
-          setError(null);
           start(async () => {
             const r = await toggleRule(id, next);
             if (!r.ok) {
               setChecked(!next);
-              setError(r.error);
+              toast.error(r.error);
+            } else {
+              toast.success(next ? "Aturan diaktifkan." : "Aturan dinonaktifkan.");
             }
           });
         }}
       />
-      {error ? <span role="alert" className="text-xs text-bad">{error}</span> : null}
     </span>
   );
 }
 
 export function DeleteRuleButton({ id, name }: { id: string; name: string }) {
   const [pending, start] = useTransition();
+  const toast = useToast();
   return (
     <button
       type="button"
@@ -45,7 +47,9 @@ export function DeleteRuleButton({ id, name }: { id: string; name: string }) {
       onClick={() => {
         if (window.confirm(`Hapus aturan "${name}"? Pesan yang sudah terjadwal dari aturan ini tidak akan dikirim.`)) {
           start(async () => {
-            await deleteRule(id);
+            const r = await deleteRule(id);
+            if (r.error) toast.error(r.error);
+            else toast.success(`Aturan "${name}" dihapus.`);
           });
         }
       }}

@@ -2,12 +2,13 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { SubmitButton } from "@/components/ui";
+import { useResultToast, useToast } from "@/components/toast";
 import { CREATIVITY, CREATIVITY_LABEL, STYLE_LABEL, STYLE_PRESETS, MAX_INSTRUCTIONS, type AdditionalInstruction, type AgentConfig, type AgentRouting, type StylePreset } from "@/lib/ai/config";
 import { addKnowledge, createAgent, deleteAgent, deleteKnowledge, saveBehavior, saveConfig, saveRouting, type AgentState } from "./actions";
 
+/** Hasil aksi ditampilkan sebagai toast, bukan teks kecil di bawah tombol. */
 function Status({ state }: { state: AgentState }) {
-  if (state.error) return <p role="alert" className="text-sm text-bad">{state.error}</p>;
-  if (state.ok) return <p role="status" className="text-sm text-ok">Tersimpan.</p>;
+  useResultToast(state);
   return null;
 }
 
@@ -266,8 +267,19 @@ export function KnowledgeForm({ agentId }: { agentId: string }) {
 
 export function DeleteKnowledgeButton({ agentId, id, label }: { agentId: string; id: string; label: string }) {
   const [pending, start] = useTransition();
+  const toast = useToast();
   return (
-    <button type="button" className="btn btn-danger btn-sm" disabled={pending} aria-label={`Hapus ${label}`} onClick={() => start(async () => { await deleteKnowledge(agentId, id); })}>
+    <button
+      type="button"
+      className="btn btn-danger btn-sm"
+      disabled={pending}
+      aria-label={`Hapus ${label}`}
+      onClick={() => start(async () => {
+        const r = await deleteKnowledge(agentId, id);
+        if (r.error) toast.error(r.error);
+        else toast.success("Pengetahuan dihapus.");
+      })}
+    >
       Hapus
     </button>
   );
@@ -275,13 +287,14 @@ export function DeleteKnowledgeButton({ agentId, id, label }: { agentId: string;
 
 export function DeleteAgentButton({ id, name }: { id: string; name: string }) {
   const [pending, start] = useTransition();
+  const toast = useToast();
   return (
     <button
       type="button"
       className="btn btn-danger btn-sm"
       disabled={pending}
       onClick={() => {
-        if (confirm(`Hapus AI agent "${name}"? Inbox yang memakainya akan dilepas.`)) start(async () => { await deleteAgent(id); });
+        if (confirm(`Hapus AI agent "${name}"? Inbox yang memakainya akan dilepas.`)) start(async () => { const r = await deleteAgent(id); if (r?.error) toast.error(r.error); });
       }}
     >
       Hapus AI agent

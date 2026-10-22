@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { InfoTip, SubmitButton } from "@/components/ui";
+import { useResultToast, useToast } from "@/components/toast";
 import { connectWhatsAppEmbedded, connectWhatsAppManual, type FormState } from "../../actions";
 
 type FBLoginResponse = { authResponse?: { code?: string } | null };
@@ -32,6 +33,9 @@ export function EmbeddedSignup({ appId, configId, graphVersion, mode }: { appId:
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error, toast]);
+  useEffect(() => { if (done) toast.success(done); }, [done, toast]);
   const code = useRef<string | null>(null);
   const session = useRef<Session | null>(null);
 
@@ -152,14 +156,13 @@ export function EmbeddedSignup({ appId, configId, graphVersion, mode }: { appId:
         {busy ? "Menunggu Meta…" : ready ? "Login dengan Facebook" : "Memuat…"}
       </button>
       <p className="hint">Jendela Meta akan terbuka. Jangan tutup halaman ini sampai selesai.</p>
-      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-      {done && <p role="status" className="text-sm text-ok">{done}</p>}
     </div>
   );
 }
 
 export function ManualConnectForm() {
   const [state, action] = useActionState<FormState, FormData>(connectWhatsAppManual, {});
+  useResultToast(state);
   return (
     <form action={action} className="flex flex-col gap-3">
       <div>
@@ -180,7 +183,6 @@ export function ManualConnectForm() {
         <p className="hint">Disimpan terenkripsi di server dan tidak pernah ditampilkan lagi.</p>
       </div>
       <SubmitButton pending="Memverifikasi…" className="btn btn-secondary">Hubungkan</SubmitButton>
-      {state.error && <p role="alert" className="text-sm text-bad">{state.error}</p>}
     </form>
   );
 }

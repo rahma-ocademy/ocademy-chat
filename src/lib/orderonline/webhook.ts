@@ -10,13 +10,15 @@ export type MappedEvent = {
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === "string" || typeof v === "number" ? String(v) : undefined);
+// Order storefront dikirim dalam Extended JSON MongoDB: {"$oid": "..."} dan {"$date": "..."}.
+const oid = (v: unknown) => (isObj(v) ? str(v.$oid) : str(v));
+const date = (v: unknown) => (isObj(v) ? str(v.$date) : str(v));
 
-// ASUMSI (belum terverifikasi): format payload webhook `order:*` tidak ada di dokumentasi publik OrderOnline.
-// Pemetaan ini toleran dan memakai nama field dari objek submission di dokumentasi (order_id, customer_data,
-// product_name, status, payment, shipping). Begitu contoh payload asli tersedia, sesuaikan di sini
-// (satu-satunya tempat yang menafsirkan payload webhook) dan perbarui test-nya.
+// Format resmi: https://developers.orderonline.id/docs/webhooks
+// - Checkout form: { type: "order", action: "create", payload: <order> }
+// - Storefront:    <order> langsung, tanpa pembungkus (action tidak ada).
+// Order baru → order.created; perubahan berikutnya dipetakan dari status.
 const STATUS_TO_EVENT: Record<string, string> = {
-  pending: "order.created",
   processing: "order.paid",
   completed: "order.completed",
   cancelled: "order.cancelled",
@@ -25,36 +27,54 @@ const STATUS_TO_EVENT: Record<string, string> = {
 
 export function mapOrderOnlinePayload(raw: unknown): MappedEvent | null {
   if (!isObj(raw)) return null;
-  const body = isObj(raw.data) ? raw.data : raw;
-  const customer = isObj(body.customer_data) ? body.customer_data : isObj(body.customer) ? body.customer : {};
+  const wrapped = raw.type === "order" && isObj(raw.payload);
+  const order = wrapped ? (raw.payload as Obj) : raw;
+  const orderId = str(order.order_id);
+  if (!orderId) return null;
 
-  const explicit = str(raw.event) ?? str(raw.type);
-  const status = str(body.status)?.toLowerCase();
-  const type = explicit ? explicit.toLowerCase() : status ? STATUS_TO_EVENT[status] : undefined;
-  if (!type) return null;
+  const action = wrapped ? str(raw.action)?.toLowerCase() : undefined;
+  const status = str(order.status)?.toLowerCase();
+  const created = date(order.created_at);
+  const updated = date(order.updated_at) ?? "";
+  const isNew = action === "create" || (action === undefined && created !== undefined && created === updated);
+  const type = isNew ? "order.created" : (status && STATUS_TO_EVENT[status]) ?? "order.updated";
 
-  const orderId = str(body.order_id) ?? str(body._id);
-  const payment = isObj(body.payment) ? body.payment : {};
-  const shipping = isObj(body.shipping) ? body.shipping : {};
+  const customer = isObj(order.customer_data) ? order.customer_data : {};
+  const productData = isObj(order.product_data) ? order.product_data : {};
+  const products = Array.isArray(order.products) ? order.products.filter(isObj) : [];
+  const payment = isObj(order.payment) ? order.payment : {};
+  const shipping = isObj(order.shipping) ? order.shipping : {};
+
+  const productIds = [oid(order.product_id), ...products.map((p) => oid(p.product_id))].filter((v): v is string => Boolean(v));
+  const productName = str(productData.name) ?? (products.length ? products.map((p) => str(p.name)).filter(Boolean).join(", ") : undefined);
 
   const data: Record<string, unknown> = {
     order_id: orderId,
-    product_name: str(body.product_name),
-    total: str(body.gross_revenue) ?? str(body.total_price),
-    payment_status: str(payment.status) ?? str(body.payment_status),
-    payment_method: str(payment.method) ?? str(body.payment_method),
-    courier: str(shipping.courier) ?? str(shipping.name),
+    product_ids: productIds,
+    product_name: productName,
+    product_price: str(order.product_price),
+    shipping_cost: str(shipping.cost),
+    total: str(order.total_price),
+    payment_status: str(payment.status),
+    payment_method: str(payment.method),
+    courier: str(shipping.courier),
     tracking_number: str(shipping.receipt_number) ?? str(shipping.tracking_number),
     status,
+    customer_name: str(customer.name),
+    phone: str(customer.phone),
+    address: str(customer.address),
+    city: str(customer.city_name) ?? str(customer.city),
+    district: str(customer.subdistrict_name) ?? str(customer.district),
   };
-  const phone = str(customer.phone);
-  const name = str(customer.name);
-  data.customer_name = name;
 
-  const stamp = str(body.updated_at) ?? str(raw.timestamp) ?? "";
-  const idempotencyKey = orderId
-    ? `oo:${type}:${orderId}:${stamp}`
-    : `oo:${createHash("sha256").update(JSON.stringify(raw)).digest("hex").slice(0, 32)}`;
+  const idempotencyKey = isNew
+    ? `oo:order.created:${orderId}`
+    : `oo:${type}:${orderId}:${updated || createHash("sha256").update(JSON.stringify(raw)).digest("hex").slice(0, 32)}`;
 
-  return { type, idempotencyKey, contact: { phone, name }, data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)) };
+  return {
+    type,
+    idempotencyKey,
+    contact: { phone: str(customer.phone), name: str(customer.name) },
+    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined && !(Array.isArray(v) && v.length === 0))),
+  };
 }

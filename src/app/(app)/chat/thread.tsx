@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState, useTransition } from "react";
 import { CircleCheckBig, Lock, Reply, RotateCcw, Send, StickyNote } from "lucide-react";
 import { Avatar } from "@/components/avatar";
+import { useToast } from "@/components/toast";
 import { markRead, sendMessage, setConversationStatus } from "./actions";
 
 type Msg = {
@@ -48,7 +49,7 @@ export function ThreadView({
 }) {
   const bottom = useRef<HTMLDivElement>(null);
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   // Membuka percakapan = membacanya.
   useEffect(() => {
@@ -61,9 +62,9 @@ export function ThreadView({
 
   const toggleStatus = () =>
     start(async () => {
-      setError(null);
       const r = await setConversationStatus(conversationId, status === "open" ? "resolved" : "open");
-      if (!r.ok) setError(r.error);
+      if (!r.ok) toast.error(r.error);
+      else toast.success(status === "open" ? "Percakapan ditandai selesai." : "Percakapan dibuka lagi.");
     });
 
   return (
@@ -81,7 +82,6 @@ export function ThreadView({
           {status === "open" ? <CircleCheckBig aria-hidden="true" className="size-4" /> : <RotateCcw aria-hidden="true" className="size-4" />}
           {status === "open" ? "Selesaikan" : "Buka lagi"}
         </button>
-        {error && <p role="alert" className="w-full text-sm text-bad">{error}</p>}
       </header>
 
       <div
@@ -138,17 +138,18 @@ export function ThreadView({
 function Composer({ conversationId }: { conversationId: string }) {
   const [text, setText] = useState("");
   const [note, setNote] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, start] = useTransition();
 
   const send = () => {
     const body = text.trim();
     if (!body || pending) return;
-    setError(null);
     start(async () => {
       const r = await sendMessage(conversationId, body, note);
-      if (r.ok) setText("");
-      else setError(r.error);
+      if (r.ok) {
+        setText("");
+        if (note) toast.success("Catatan internal disimpan.");
+      } else toast.error(r.error);
     });
   };
 
@@ -197,7 +198,6 @@ function Composer({ conversationId }: { conversationId: string }) {
           <span className="hidden sm:inline">{pending ? "Mengirim…" : note ? "Simpan" : "Kirim"}</span>
         </button>
       </div>
-      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
       <p className="hidden text-[11px] text-muted sm:block">
         <kbd className="kbd">Enter</kbd> kirim · <kbd className="kbd">Shift</kbd> + <kbd className="kbd">Enter</kbd> baris baru
       </p>

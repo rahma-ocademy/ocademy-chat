@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { SubmitButton } from "@/components/ui";
+import { useResultToast } from "@/components/toast";
+import { AI_AGENTS_ENABLED } from "@/components/nav";
 import { createLivechatInbox, disconnectWhatsApp, retryCoexSync, updateInboxSettings, type FormState } from "./actions";
 
 export function InboxSettingsForm({
@@ -17,6 +19,7 @@ export function InboxSettingsForm({
   readOnly: boolean;
 }) {
   const [state, action] = useActionState<FormState, FormData>(updateInboxSettings, {});
+  useResultToast(state, "Pengaturan inbox tersimpan.");
   return (
     <form action={action} className="flex flex-col gap-5 border-t border-line-soft pt-5">
       <input type="hidden" name="id" value={inbox.id} />
@@ -32,7 +35,8 @@ export function InboxSettingsForm({
           </label>
         </div>
 
-        <div>
+        {!AI_AGENTS_ENABLED && <input type="hidden" name="ai_agent_id" value={inbox.aiAgentId ?? ""} />}
+        <div hidden={!AI_AGENTS_ENABLED}>
           <label htmlFor="inbox-ai" className="label">AI agent</label>
           <select id="inbox-ai" name="ai_agent_id" className="field" defaultValue={inbox.aiAgentId ?? ""}>
             <option value="">Tanpa AI agent (dijawab agen manusia)</option>
@@ -71,8 +75,6 @@ export function InboxSettingsForm({
       {!readOnly && (
         <div className="flex flex-wrap items-center gap-3">
           <SubmitButton pending="Menyimpan…">Simpan pengaturan</SubmitButton>
-          {state.error && <p role="alert" className="text-sm text-bad">{state.error}</p>}
-          {state.ok && <p role="status" className="text-sm text-ok">Tersimpan.</p>}
         </div>
       )}
     </form>
@@ -82,12 +84,18 @@ export function InboxSettingsForm({
 export function WhatsAppControls({ id, coexistence, connected }: { id: string; coexistence: boolean; connected: boolean }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<FormState>({});
-  const run = (fn: () => Promise<FormState>) => start(async () => setMsg(await fn()));
+  const [okText, setOkText] = useState("");
+  useResultToast(msg, okText);
+  const run = (fn: () => Promise<FormState>, ok: string) =>
+    start(async () => {
+      setOkText(ok);
+      setMsg(await fn());
+    });
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
         {coexistence && connected && (
-          <button type="button" className="btn btn-secondary btn-sm" disabled={pending} onClick={() => run(() => retryCoexSync(id))}>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={pending} onClick={() => run(() => retryCoexSync(id), "Sinkron diminta.")}>
             Sinkron ulang kontak & riwayat
           </button>
         )}
@@ -100,21 +108,20 @@ export function WhatsAppControls({ id, coexistence, connected }: { id: string; c
             className="btn btn-danger btn-sm"
             disabled={pending}
             onClick={() => {
-              if (confirm("Putuskan nomor ini? Pesan baru tidak akan masuk sampai dihubungkan lagi. Riwayat chat tetap tersimpan.")) run(() => disconnectWhatsApp(id));
+              if (confirm("Putuskan nomor ini? Pesan baru tidak akan masuk sampai dihubungkan lagi. Riwayat chat tetap tersimpan.")) run(() => disconnectWhatsApp(id), "Nomor diputus.");
             }}
           >
             Putuskan
           </button>
         )}
       </div>
-      {msg.error && <p role="alert" className="text-sm text-bad">{msg.error}</p>}
-      {msg.note && <p role="status" className="text-sm text-ok">{msg.note}</p>}
     </div>
   );
 }
 
 export function CreateLivechatForm() {
   const [state, action] = useActionState<FormState, FormData>(createLivechatInbox, {});
+  useResultToast(state);
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
       <div className="min-w-64 flex-1">
@@ -122,7 +129,6 @@ export function CreateLivechatForm() {
         <input id="lc-name" name="name" className="field" placeholder="mis. Website toko" required minLength={2} maxLength={60} />
       </div>
       <SubmitButton pending="Membuat…">Buat inbox livechat</SubmitButton>
-      {state.error && <p role="alert" className="basis-full text-sm text-bad">{state.error}</p>}
     </form>
   );
 }

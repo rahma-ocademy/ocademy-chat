@@ -1,5 +1,8 @@
 import { Bot, FileText, Gauge, MessagesSquare, Plug, RadioTower, Users, Zap, type LucideIcon } from "lucide-react";
 
+/** Menu AI agent disembunyikan sementara (belum dibutuhkan). Ubah ke true untuk menampilkannya lagi. */
+export const AI_AGENTS_ENABLED = false;
+
 export type Tone = "brand" | "navy" | "violet" | "amber" | "sky" | "rose" | "ok";
 
 export type NavItem = {
@@ -14,7 +17,7 @@ export type NavItem = {
 export type NavGroup = { label: string | null; items: NavItem[] };
 
 /** Satu sumber menu: sidebar, judul top bar, dan ikon di header halaman membaca dari sini. */
-export const NAV: NavGroup[] = [
+const ALL_GROUPS: NavGroup[] = [
   {
     label: null,
     items: [{ href: "/chat", label: "Inbox", hint: "Baca dan balas semua percakapan pelanggan", icon: MessagesSquare, tone: "brand" }],
@@ -38,7 +41,11 @@ export const NAV: NavGroup[] = [
   },
 ];
 
-const ALL = NAV.flatMap((g) => g.items.map((item) => ({ item, group: g.label })));
+const AI_HREF = "/ai-agents";
+export const NAV: NavGroup[] = ALL_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => AI_AGENTS_ENABLED || i.href !== AI_HREF) }));
+
+// Halaman yang disembunyikan tetap dikenali (judul/ikon header) bila dibuka lewat URL langsung.
+const ALL = ALL_GROUPS.flatMap((g) => g.items.map((item) => ({ item, group: g.label })));
 
 export const isActive = (pathname: string, href: string) => Boolean(pathname) && (pathname === href || pathname.startsWith(`${href}/`));
 
@@ -47,10 +54,11 @@ export function findNav(pathname: string) {
 }
 
 /** Pintasan "+ Baru" di top bar. */
-export const QUICK_CREATE = [
+const QUICK_CREATE_ALL = [
   { href: "/connected-platforms/new", label: "Inbox / platform", icon: RadioTower, tone: "ok" as Tone },
   { href: "/followups/new", label: "Follow-up otomatis", icon: Zap, tone: "amber" as Tone },
   { href: "/templates", label: "Template pesan", icon: FileText, tone: "sky" as Tone },
   { href: "/ai-agents", label: "AI agent", icon: Bot, tone: "violet" as Tone },
   { href: "/settings/users", label: "Undang anggota tim", icon: Users, tone: "rose" as Tone },
 ];
+export const QUICK_CREATE = QUICK_CREATE_ALL.filter((q) => AI_AGENTS_ENABLED || q.href !== AI_HREF);

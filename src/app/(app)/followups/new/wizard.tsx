@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Zap } from "lucide-react";
 import { useState, useTransition } from "react";
+import { useToast } from "@/components/toast";
 import { EVENTS, eventLabel } from "@/lib/followups/events";
 import { createRule } from "../actions";
 
@@ -28,7 +29,7 @@ export function Wizard({ templates }: { templates: TemplateOption[] }) {
   const [win, setWin] = useState({ start: "08:00", end: "21:00" });
   const [stops, setStops] = useState<string[]>(["order.paid", "order.cancelled"]);
   const [maxPerDay, setMaxPerDay] = useState<number | "">(2);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   const tplName = (id: string) => templates.find((t) => t.id === id)?.name ?? "—";
@@ -41,12 +42,11 @@ export function Wizard({ templates }: { templates: TemplateOption[] }) {
 
   function next() {
     const e = validate(step);
-    setError(e);
-    if (!e) setStep((s) => s + 1);
+    if (e) toast.error(e);
+    else setStep((s) => s + 1);
   }
 
   function submit(activate: boolean) {
-    setError(null);
     startTransition(async () => {
       const r = await createRule({
         name,
@@ -58,7 +58,7 @@ export function Wizard({ templates }: { templates: TemplateOption[] }) {
         max_per_day: maxPerDay === "" ? null : maxPerDay,
         activate,
       });
-      if (r && !r.ok) setError(r.error); // sukses = redirect dari server action
+      if (r && !r.ok) toast.error(r.error); // sukses = redirect dari server action
     });
   }
 
@@ -245,14 +245,13 @@ export function Wizard({ templates }: { templates: TemplateOption[] }) {
           </dl>
         )}
 
-        {error && <p role="alert" className="rounded-lg bg-bad-soft px-3.5 py-2.5 text-sm text-[#912018]">{error}</p>}
       </div>
 
       <div className="card sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-3 p-3.5 shadow-[var(--shadow-pop)]">
         {step === 0 ? (
           <Link href="/followups" className="btn btn-secondary btn-lg">Batal</Link>
         ) : (
-          <button type="button" className="btn btn-secondary btn-lg" onClick={() => { setError(null); setStep(step - 1); }}><ArrowLeft aria-hidden="true" className="size-4" /> Kembali</button>
+          <button type="button" className="btn btn-secondary btn-lg" onClick={() => setStep(step - 1)}><ArrowLeft aria-hidden="true" className="size-4" /> Kembali</button>
         )}
         {step < STEPS.length - 1 ? (
           <button type="button" className="btn btn-primary btn-lg" onClick={next}>Lanjut <ArrowRight aria-hidden="true" className="size-4" /></button>

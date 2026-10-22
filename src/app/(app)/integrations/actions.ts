@@ -51,11 +51,13 @@ export async function createApiKey(_: KeyState, formData: FormData): Promise<Key
   return { key, name: parsed.data.name };
 }
 
-export async function revokeApiKey(id: string) {
-  if (!z.string().uuid().safeParse(id).success) return;
+export async function revokeApiKey(id: string): Promise<{ error?: string }> {
+  if (!z.string().uuid().safeParse(id).success) return { error: "Data tidak valid." };
   const { supabase, businessId } = await requireContext();
-  await supabase.from("api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", id).eq("business_id", businessId);
+  const { error } = await supabase.from("api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", id).eq("business_id", businessId);
+  if (error) return { error: "Gagal mencabut kunci." };
   revalidatePath("/integrations");
+  return {};
 }
 
 // ─── OrderOnline ──────────────────────────────────────────────────────────
@@ -64,10 +66,7 @@ const errText = (e: unknown) => (e instanceof OrderOnlineError ? e.message : (e 
 
 export async function connectOrderOnline(_: OOState, formData: FormData): Promise<OOState> {
   const token = String(formData.get("token") ?? "").trim();
-  if (token.length < 8) return { error: "Open API Token tidak valid." };
-  if (!process.env.ORDERONLINE_PARTNER_API_KEY) {
-    return { error: "Aplikasi belum punya Partner API key OrderOnline (ORDERONLINE_PARTNER_API_KEY). Daftar sebagai partner OrderOnline dulu." };
-  }
+  if (token.length < 8) return { error: "Personal Access Token tidak valid." };
 
   const { supabase, businessId } = await requireContext();
   try {
@@ -100,7 +99,7 @@ export async function connectOrderOnline(_: OOState, formData: FormData): Promis
     const r = await syncOrderOnline(admin, businessId, integrationId);
     revalidatePath("/integrations/orderonline");
     revalidatePath("/templates");
-    return { message: `Terhubung. ${r.templates} template diimpor, ${r.rulesAdded} aturan ditambahkan (nonaktif).` };
+    return { message: `Terhubung. ${r.templates} template dari ${r.products} produk diimpor, ${r.rulesAdded} aturan ditambahkan (nonaktif).` };
   } catch (e) {
     await admin.from("integrations").update({ status: "error" }).eq("id", integrationId);
     revalidatePath("/integrations/orderonline");
@@ -116,7 +115,7 @@ export async function resyncOrderOnline(): Promise<OOState> {
     const r = await syncOrderOnline(createSupabaseAdmin(), businessId, integ.id);
     revalidatePath("/integrations/orderonline");
     revalidatePath("/templates");
-    return { message: `Sinkron selesai: ${r.templates} template diperbarui, ${r.rulesAdded} aturan baru.` };
+    return { message: `Sinkron selesai: ${r.templates} template dari ${r.products} produk diperbarui, ${r.rulesAdded} aturan baru.` };
   } catch (e) {
     await createSupabaseAdmin().from("integrations").update({ status: "error" }).eq("id", integ.id);
     revalidatePath("/integrations/orderonline");

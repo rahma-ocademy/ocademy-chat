@@ -16,7 +16,6 @@ export default async function OrderOnlinePage() {
     .eq("type", "orderonline")
     .maybeSingle();
 
-  const partnerKeyMissing = !process.env.ORDERONLINE_PARTNER_API_KEY;
   const connected = integ && integ.status !== "disconnected";
 
   const [tpls, rules, active] = integ
@@ -38,20 +37,14 @@ export default async function OrderOnlinePage() {
         nav="/integrations"
         back={{ href: "/integrations", label: "Integrasi & API" }}
         title="OrderOnline"
-        description="Impor template follow-up & pengiriman dari OrderOnline, terima event order lewat webhook, lalu kirim follow-up dari sini."
+        description="Impor template follow-up per produk dari OrderOnline, terima event order lewat webhook, lalu kirim follow-up dari sini."
       />
-
-      {partnerKeyMissing && (
-        <Notice tone="warn">
-          <strong>Prasyarat:</strong> integrasi ini butuh <em>Partner API key</em> dari OrderOnline (env <code>ORDERONLINE_PARTNER_API_KEY</code>). Kunci ini hanya diberikan kepada partner resmi.
-        </Notice>
-      )}
 
       {!connected ? (
         <section className="card flex flex-col gap-5 p-6" aria-labelledby="h-connect">
           <h2 id="h-connect" className="text-lg font-bold text-navy">Hubungkan akun</h2>
           <ol className="list-decimal space-y-1.5 pl-5 text-sm leading-relaxed">
-            <li>Di dashboard OrderOnline, buat atau salin <strong>Open API Token</strong>.</li>
+            <li>Di dashboard OrderOnline, buat atau salin <strong>Personal Access Token</strong>.</li>
             <li>Tempel di bawah, lalu hubungkan.</li>
             <li>Setelah terhubung, pasang <strong>URL webhook</strong> yang muncul di dashboard OrderOnline (cakupan <code className="font-mono">order:*</code>).</li>
           </ol>

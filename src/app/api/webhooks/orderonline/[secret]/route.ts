@@ -9,7 +9,7 @@ import { sha256Hex } from "@/lib/crypto";
 /**
  * Webhook OrderOnline (cakupan order:*). Autentikasi: secret acak di URL (tiap integrasi punya sendiri).
  * Payload yang belum bisa dipetakan tetap DISIMPAN sebagai `orderonline.unmapped` agar format aslinya bisa
- * dilihat dan pemetaan di lib/orderonline/webhook.ts disesuaikan (format publiknya belum terdokumentasi).
+ * dilihat (mis. kode verifikasi saat mendaftarkan webhook). Format: https://developers.orderonline.id/docs/webhooks
  */
 export async function POST(req: Request, ctx: RouteContext<"/api/webhooks/orderonline/[secret]">) {
   const { secret } = await ctx.params;

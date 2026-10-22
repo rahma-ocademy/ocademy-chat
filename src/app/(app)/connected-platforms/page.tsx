@@ -68,7 +68,7 @@ export default async function ConnectedPlatformsPage({ searchParams }: { searchP
       <PageHeader
         nav="/connected-platforms"
         title="Platform terhubung"
-        description="Hubungkan WhatsApp dan livechat, lalu atur AI agent dan agen yang menangani tiap inbox."
+        description="Hubungkan WhatsApp dan livechat, lalu atur agen yang menangani tiap inbox."
         actions={admin ? <Link href="/connected-platforms/new" className="btn btn-primary"><Plus aria-hidden="true" className="size-4" /> Inbox baru</Link> : undefined}
       />
 

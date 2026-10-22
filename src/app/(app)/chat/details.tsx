@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { CircleCheckBig, Inbox, Mail, Phone, Plus, RotateCcw, Tag, UserCheck, X } from "lucide-react";
 import { Avatar } from "@/components/avatar";
+import { useToast } from "@/components/toast";
 import { addLabel, assignConversation, removeLabel, setConversationStatus, type ChatResult } from "./actions";
 
 type Label = { id: string; name: string; color: string };
@@ -27,16 +28,18 @@ export function Details({
   allLabels: Label[];
 }) {
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [newLabel, setNewLabel] = useState("");
   const name = contact?.name || contact?.phone || "Pengunjung";
 
-  const run = (fn: () => Promise<ChatResult>, after?: () => void) => {
-    setError(null);
+  const run = (fn: () => Promise<ChatResult>, okText: string, after?: () => void) => {
     start(async () => {
       const r = await fn();
-      if (!r.ok) setError(r.error);
-      else after?.();
+      if (!r.ok) toast.error(r.error);
+      else {
+        toast.success(okText);
+        after?.();
+      }
     });
   };
 
@@ -74,7 +77,7 @@ export function Details({
           className="field !min-h-10 !text-sm"
           value={assigneeId ?? ""}
           disabled={pending}
-          onChange={(e) => run(() => assignConversation(conversationId, e.target.value || null))}
+          onChange={(e) => run(() => assignConversation(conversationId, e.target.value || null), "Penanggung jawab diperbarui.")}
         >
           <option value="">Belum diambil</option>
           {agents.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
@@ -96,7 +99,7 @@ export function Details({
                 className="flex size-5 items-center justify-center rounded-full text-muted hover:bg-bad-soft hover:text-bad"
                 aria-label={`Hapus label ${l.name}`}
                 disabled={pending}
-                onClick={() => run(() => removeLabel(conversationId, l.id))}
+                onClick={() => run(() => removeLabel(conversationId, l.id), "Label dihapus.")}
               >
                 <X aria-hidden="true" className="size-3" />
               </button>
@@ -107,7 +110,7 @@ export function Details({
           className="flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (newLabel.trim()) run(() => addLabel(conversationId, newLabel), () => setNewLabel(""));
+            if (newLabel.trim()) run(() => addLabel(conversationId, newLabel), "Label ditambahkan.", () => setNewLabel(""));
           }}
         >
           <label htmlFor="new-label" className="sr-only">Tambah label</label>
@@ -121,18 +124,17 @@ export function Details({
 
       <section className="border-t border-line-soft pt-4">
         {status === "open" ? (
-          <button type="button" className="btn btn-primary w-full" disabled={pending} onClick={() => run(() => setConversationStatus(conversationId, "resolved"))}>
+          <button type="button" className="btn btn-primary w-full" disabled={pending} onClick={() => run(() => setConversationStatus(conversationId, "resolved"), "Percakapan ditandai selesai.")}>
             <CircleCheckBig aria-hidden="true" className="size-4" /> Tandai selesai
           </button>
         ) : (
-          <button type="button" className="btn btn-secondary w-full" disabled={pending} onClick={() => run(() => setConversationStatus(conversationId, "open"))}>
+          <button type="button" className="btn btn-secondary w-full" disabled={pending} onClick={() => run(() => setConversationStatus(conversationId, "open"), "Percakapan dibuka lagi.")}>
             <RotateCcw aria-hidden="true" className="size-4" /> Buka lagi
           </button>
         )}
         <p className="hint text-center">Pesan baru dari pelanggan otomatis membuka lagi percakapan yang sudah selesai.</p>
       </section>
 
-      {error && <p role="alert" className="rounded-lg bg-bad-soft px-3 py-2 text-sm text-[#912018]">{error}</p>}
     </div>
   );
 }

@@ -1,8 +1,12 @@
 import "server-only";
-import { optionalEnv, requireEnv } from "@/lib/env";
-import type { AutotextMap, ShippingMap } from "@/lib/orderonline/import";
+import { optionalEnv } from "@/lib/env";
+import type { OrderOnlineProduct } from "@/lib/orderonline/import";
 
-const base = () => optionalEnv("ORDERONLINE_BASE_URL") ?? "https://open-api.orderonline.id/open-api";
+// Tanpa partner key. Satu host (api-master.orderonline.id), https://developers.orderonline.id/reference:
+// - Login: POST /v1/auth — Personal Access Token → JWT, lalu JWT dipakai sebagai Bearer.
+// - Template follow-up: field `follow_up_autotext` di GET /v1/products.
+// - Webhook & progres: path Open API lama di /open-api (butuh partner key; tidak dipakai di alur utama).
+const base = () => optionalEnv("ORDERONLINE_BASE_URL") ?? "https://api-master.orderonline.id";
 
 export class OrderOnlineError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -10,15 +14,14 @@ export class OrderOnlineError extends Error {
   }
 }
 
-async function call<T>(path: string, init: RequestInit & { accessToken?: string }): Promise<T> {
+async function call<T>(url: string, init: RequestInit & { accessToken?: string }): Promise<T> {
   const headers = new Headers(init.headers);
-  headers.set("X-OrderOnline-Partner-Api-Key", requireEnv("ORDERONLINE_PARTNER_API_KEY"));
   headers.set("Accept", "application/json");
   if (init.accessToken) headers.set("Authorization", `Bearer ${init.accessToken}`);
 
   let res: Response;
   try {
-    res = await fetch(`${base()}${path}`, { ...init, headers, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    res = await fetch(url, { ...init, headers, cache: "no-store", signal: AbortSignal.timeout(15_000) });
   } catch (e) {
     throw new OrderOnlineError(`Tidak bisa menghubungi OrderOnline: ${(e as Error).message}`);
   }
@@ -34,29 +37,32 @@ async function call<T>(path: string, init: RequestInit & { accessToken?: string 
 
 type Envelope<T> = { data: T; message?: string; error_code?: number };
 
-/** Tukar Open API Token milik penjual menjadi access token (Bearer). */
-export async function login(openApiToken: string) {
-  const form = new FormData();
-  form.set("token", openApiToken);
-  const r = await call<Envelope<{ user_id: string; name: string; email: string; access_token: string }>>("/auth/login", {
+/** Tukar Personal Access Token milik penjual menjadi JWT (Bearer). 400 = token salah atau akun nonaktif. */
+export async function login(personalAccessToken: string) {
+  const r = await call<Envelope<{ user_id: string; name: string; email: string; username: string; access_token: string }>>(`${base()}/v1/auth`, {
     method: "POST",
-    body: form,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: personalAccessToken }),
   });
   return { accessToken: r.data.access_token, userId: r.data.user_id, name: r.data.name };
 }
 
-export async function getFollowupAutotext(accessToken: string): Promise<AutotextMap> {
-  const r = await call<Envelope<{ follow_up_autotext: AutotextMap }>>("/followup-autotext", { accessToken });
-  return r.data.follow_up_autotext ?? {};
-}
-
-export async function getShippingTemplates(accessToken: string): Promise<ShippingMap> {
-  const r = await call<Envelope<{ value: ShippingMap }>>("/setting/shipping-auto-wa-template", { accessToken });
-  return r.data.value ?? {};
+/** Semua produk penjual (maks 1000 per halaman), termasuk `follow_up_autotext` per produk. */
+export async function listProducts(accessToken: string): Promise<OrderOnlineProduct[]> {
+  const all: OrderOnlineProduct[] = [];
+  for (let page = 1; page <= 50; page++) {
+    const r = await call<Envelope<{ products?: OrderOnlineProduct[]; page_info?: { last_page?: number } }>>(
+      `${base()}/v1/products?limit=1000&page=${page}`,
+      { accessToken },
+    );
+    all.push(...(r.data.products ?? []));
+    if (page >= (r.data.page_info?.last_page ?? 1)) break;
+  }
+  return all;
 }
 
 export async function getWebhooks(accessToken: string) {
-  const r = await call<Envelope<{ data?: { _id: string; url: string; scope: string[] }[] }>>("/webhooks", { accessToken });
+  const r = await call<Envelope<{ data?: { _id: string; url: string; scope: string[] }[] }>>(`${base()}/open-api/webhooks`, { accessToken });
   return r.data.data ?? [];
 }
 
@@ -68,5 +74,5 @@ export async function getWebhooks(accessToken: string) {
 export async function markProgress(accessToken: string, submissionId: string, progressKey: string) {
   const form = new FormData();
   form.set(progressKey, "true");
-  await call(`/submissions/${encodeURIComponent(submissionId)}/progress`, { method: "PUT", accessToken, body: form });
+  await call(`${base()}/open-api/submissions/${encodeURIComponent(submissionId)}/progress`, { method: "PUT", accessToken, body: form });
 }

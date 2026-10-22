@@ -31,7 +31,7 @@ Frontend dan backend dalam **satu aplikasi Next.js** (App Router). Data, autenti
 - **Followups**: daftar aturan + toggle aktif, wizard 4 langkah (pemicu → template & jeda → jadwal & aturan berhenti → ringkasan), template dengan pratinjau.
 - **Mesin follow-up**: event masuk (idempoten) → jadwalkan job → batalkan job saat event berhenti (mis. `order.paid`) → worker mengirim job yang jatuh tempo (jam kirim, batas harian, variabel wajib terisi). Bila ada inbox WhatsApp terhubung, pesan dikirim lewat Cloud API (template Meta bila `wa_template_name` diisi) dan muncul di percakapan kontak; bila tidak, masuk `outbox_messages` seperti sebelumnya.
 - **Open API untuk pihak ketiga** (`/api/v1`): `POST /events`, `GET|POST /followup-templates`, `GET|PATCH|DELETE /followup-templates/{id}`, `POST /followup-templates/{id}/preview`. Autentikasi API key ber-scope.
-- **OrderOnline**: hubungkan lewat Open API Token, impor 11 template follow-up + 4 template pengiriman (aturan dibuat **nonaktif**), URL webhook per integrasi.
+- **OrderOnline**: hubungkan lewat Personal Access Token, impor template follow-up per produk dari `GET /v1/products` (teks yang sama digabung; aturan dibatasi ke produknya dan dibuat **nonaktif**), URL webhook per integrasi. Template pengiriman tidak diimpor (hanya tersedia di Open API lama yang butuh partner key).
 
 ## Yang belum ada / perlu kamu tahu
 
@@ -41,8 +41,7 @@ Frontend dan backend dalam **satu aplikasi Next.js** (App Router). Data, autenti
 - **Undangan tidak dikirim lewat email**: link undangan ditampilkan sekali untuk disalin dan dikirim manual (Cekat mengirim email).
 - **AI agent belum menjawab** (tidak ada LLM/RAG). Tab Followups, Integrations, Orchestration, Evaluation Cekat belum dibuat; sumber pengetahuan Website/File/Product belum ada.
 - **Belum saya jalankan terhadap Supabase atau OrderOnline sungguhan.** Yang sudah diverifikasi: typecheck, lint, unit test (jadwal, render, kondisi, telepon, impor OrderOnline, webhook OrderOnline & WhatsApp, filter inbox, izin & undangan, konfigurasi AI), build produksi. Ketiga migrasi dijalankan di **PGlite** (Postgres WASM) dengan stub skema `auth` Supabase, plus uji RLS/constraint `0003` (lihat bagian Verifikasi) — bukan Supabase asli.
-- **Partner API key OrderOnline** hanya diberikan OrderOnline kepada partner. Tanpa itu, tombol hubungkan menampilkan penjelasan, bukan error mentah.
-- **Format payload webhook OrderOnline tidak terdokumentasi publik.** Pemetaan di `src/lib/orderonline/webhook.ts` adalah asumsi. Payload yang tidak dikenali tetap disimpan sebagai event `orderonline.unmapped` (kolom `raw`) supaya format aslinya bisa dilihat, lalu pemetaan disesuaikan.
+- **Webhook OrderOnline** dipetakan sesuai https://developers.orderonline.id/docs/webhooks (checkout form & storefront). Payload yang tidak dikenali tetap disimpan sebagai event `orderonline.unmapped` (kolom `raw`).
 - **Sinkron progres ke OrderOnline** (`PUT /submissions/:id/progress`) dimatikan; isi request-nya belum jelas. Aktifkan dengan `ORDERONLINE_SYNC_PROGRESS=true` hanya setelah dikonfirmasi.
 - **Pesan ganda**: OrderOnline tidak punya API untuk mematikan auto-WA-nya. Karena itu aturan hasil impor nonaktif; matikan auto-WA di OrderOnline sebelum mengaktifkan aturan yang sama di sini.
 - **Widget livechat belum punya rate limiting.** Pasang pembatas di depan (CDN/edge) sebelum link widget dibagikan luas.
@@ -75,7 +74,6 @@ npm run dev                  # http://localhost:3000
 | `SUPABASE_SERVICE_ROLE_KEY` | **hanya server**, melewati RLS (webhook, worker, API key) |
 | `APP_ENCRYPTION_KEY` | `openssl rand -base64 32`; mengenkripsi token OrderOnline (AES-256-GCM) |
 | `CRON_SECRET` | melindungi `/api/cron/process-followups` |
-| `ORDERONLINE_PARTNER_API_KEY` | dari OrderOnline (khusus partner) |
 | `NEXT_PUBLIC_APP_URL` | URL publik, dipakai untuk URL webhook dan link undangan |
 | `META_APP_ID`, `META_APP_SECRET`, `META_ES_CONFIG_ID` | Meta App untuk WhatsApp Embedded Signup; App Secret juga memverifikasi webhook |
 | `WHATSAPP_VERIFY_TOKEN` | string bebas, sama dengan *Verify token* webhook di Meta App |

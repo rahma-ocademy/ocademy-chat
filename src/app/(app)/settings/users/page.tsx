@@ -65,7 +65,7 @@ export default async function UsersPage() {
         <section className="card p-6" aria-labelledby="h-invite">
           <h2 id="h-invite" className="text-lg font-bold text-navy">Undang anggota</h2>
           <p className="mt-1 mb-4 text-sm text-muted">
-            Anggota baru menerima link undangan (berlaku 7 hari). Admin bisa mengatur platform & AI agent; agen hanya membalas chat.
+            Anggota baru menerima link undangan (berlaku 7 hari). Admin bisa mengatur platform; agen hanya membalas chat.
           </p>
           <InviteForm seatsFull={seats.limit !== null && seats.used >= seats.limit} />
         </section>

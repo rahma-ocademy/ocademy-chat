@@ -131,6 +131,25 @@ export async function sendTemplate(token: string, phoneNumberId: string, to: str
 /** Kode error Meta yang artinya "di luar jendela 24 jam, pakai template". */
 export const OUTSIDE_WINDOW = 131047;
 
+/** Ajukan template baru ke Meta untuk direview. `bodyExamples` wajib bila body memakai variabel {{1}}, {{2}}, …. */
+export async function createMessageTemplate(
+  token: string,
+  wabaId: string,
+  t: { name: string; language: string; category: "UTILITY" | "MARKETING"; body: string; bodyExamples: string[] },
+): Promise<{ id: string | null; status: string }> {
+  const r = await call<{ id?: string; status?: string }>(`${encodeURIComponent(wabaId)}/message_templates`, {
+    method: "POST",
+    token,
+    body: {
+      name: t.name,
+      language: t.language,
+      category: t.category,
+      components: [{ type: "BODY", text: t.body, ...(t.bodyExamples.length ? { example: { body_text: [t.bodyExamples] } } : {}) }],
+    },
+  });
+  return { id: r.id ?? null, status: (r.status ?? "PENDING").toUpperCase() };
+}
+
 export type MetaTemplate = { name: string; language: string; status: string; category: string | null; rejected_reason: string | null };
 
 /** Semua template pesan di WABA beserta status persetujuan Meta (mengikuti paging, maks. 1.000 template). */

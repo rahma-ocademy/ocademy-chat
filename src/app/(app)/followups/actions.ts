@@ -21,11 +21,13 @@ export async function toggleRule(ruleId: string, active: boolean): Promise<Actio
   return { ok: true };
 }
 
-export async function deleteRule(ruleId: string) {
-  if (!z.string().uuid().safeParse(ruleId).success) return;
+export async function deleteRule(ruleId: string): Promise<{ error?: string }> {
+  if (!z.string().uuid().safeParse(ruleId).success) return { error: "Aturan tidak valid." };
   const { supabase, businessId } = await requireContext();
-  await supabase.from("followup_rules").delete().eq("id", ruleId).eq("business_id", businessId);
+  const { error } = await supabase.from("followup_rules").delete().eq("id", ruleId).eq("business_id", businessId);
+  if (error) return { error: "Gagal menghapus aturan." };
   revalidatePath("/followups");
+  return {};
 }
 
 const ruleSchema = z.object({
